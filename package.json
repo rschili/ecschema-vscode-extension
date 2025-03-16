@@ -17,18 +17,11 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:semanticLanguage"
+		"onLanguage:xml"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"languages": [
-			{
-				"id": "semanticLanguage",
-				"extensions": [
-					".semanticLanguage"
-				]
-			}
-		]
+
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

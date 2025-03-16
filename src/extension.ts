@@ -21,7 +21,7 @@ const legend = (function() {
 })();
 
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.languages.registerDocumentSemanticTokensProvider({ language: 'semanticLanguage' }, new DocumentSemanticTokensProvider(), legend));
+	context.subscriptions.push(vscode.languages.registerDocumentSemanticTokensProvider({ language: 'xml', pattern: '**/*.ecschema.xml' }, new DocumentSemanticTokensProvider(), legend));
 }
 
 interface IParsedToken {
