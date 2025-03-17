@@ -38,6 +38,21 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.languages.registerHoverProvider(selector, new ECSchemaHoverProvider()));
+
+
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(selector, new ECSchemaDefinitionProvider())
+    );
+}
+
+class ECSchemaDefinitionProvider implements vscode.DefinitionProvider {
+    provideDefinition(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition> {
+        const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
+        if (range) {
+            return new vscode.Location(document.uri, range);
+        }
+        return undefined;
+    }
 }
 
 class ECSchemaHoverProvider implements vscode.HoverProvider {

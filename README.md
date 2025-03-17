@@ -10,10 +10,12 @@ Planned features:
 - [ ] Validate attribute values (item names, references, types...)
 - [ ] Provide code actions that allow to auto complete or fix the current element
 - [ ] Detect duplicate attributes or item/property names
+- [ ] Jump to symbol (baseclass, referenced item, referenced schema)
 
 Registers the following providers to vscode
 - SemanticTokenProvider (complements the visual studio textmate regex grammar for xml to add more context)
 - HoverProvider (tooltips with descriptions or additional into)
+- DefinitionProvider (provides jump-to support)
 - CodeActionsProvider (fix broken or missing attributes)
 - Diagnostic (report errors about broken things)
 - CompletionItemProvider (suggest attributes, item names, elements)
