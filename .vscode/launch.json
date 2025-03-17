@@ -11,7 +11,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"${workspaceFolder}/../bis-schemas/",
+				"${workspaceFolder}/samples/",
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"

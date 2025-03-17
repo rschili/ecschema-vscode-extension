@@ -1,363 +1,165 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 
-const COMMAND = 'code-actions-sample.command';
-
-/** String to detect in the text document. */
-const EMOJI = 'emoji';
-
-/** Code that is used to associate diagnostic entries with code actions. */
-export const EMOJI_MENTION = 'emoji_mention';
+const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
 const tokenTypes = new Map<string, number>();
 const tokenModifiers = new Map<string, number>();
 
 const legend = (function() {
-	const tokenTypesLegend = [
-		'comment', 'string', 'keyword', 'number', 'regexp', 'operator', 'namespace',
-		'type', 'struct', 'class', 'interface', 'enum', 'typeParameter', 'function',
-		'method', 'decorator', 'macro', 'variable', 'parameter', 'property', 'label'
-	];
-	tokenTypesLegend.forEach((tokenType, index) => tokenTypes.set(tokenType, index));
+    const tokenTypesLegend = ['invalid'];
+    tokenTypesLegend.forEach((tokenType, index) => tokenTypes.set(tokenType, index));
 
-	const tokenModifiersLegend = [
-		'declaration', 'documentation', 'readonly', 'static', 'abstract', 'deprecated',
-		'modification', 'async'
-	];
-	tokenModifiersLegend.forEach((tokenModifier, index) => tokenModifiers.set(tokenModifier, index));
+    const tokenModifiersLegend = ['duplicate'];
+    tokenModifiersLegend.forEach((tokenModifier, index) => tokenModifiers.set(tokenModifier, index));
 
-	return new vscode.SemanticTokensLegend(tokenTypesLegend, tokenModifiersLegend);
+    return new vscode.SemanticTokensLegend(tokenTypesLegend, tokenModifiersLegend);
 })();
 
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(
-		vscode.languages.registerDocumentSemanticTokensProvider({ language: 'xml', pattern: '**/*.ecschema.xml' }
-			, new DocumentSemanticTokensProvider(), legend));
-	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider('xml', new Emojizer(), {
-			providedCodeActionKinds: Emojizer.providedCodeActionKinds
-		}));
+    context.subscriptions.push(
+        vscode.languages.registerDocumentSemanticTokensProvider({ language: 'xml', pattern: '**/*.ecschema.xml' }, new DocumentSemanticTokensProvider(), legend)
+    );
 
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider('xml', new ECSchemaCodeActionsProvider(), {
+            providedCodeActionKinds: ECSchemaCodeActionsProvider.providedCodeActionKinds
+        })
+    );
 
-	const emojiDiagnostics = vscode.languages.createDiagnosticCollection("emoji");
-	context.subscriptions.push(emojiDiagnostics);
+    const ecschemaDiagnostics = vscode.languages.createDiagnosticCollection("ecschema");
+    context.subscriptions.push(ecschemaDiagnostics);
 
-	subscribeToDocumentChanges(context, emojiDiagnostics);
+    subscribeToDocumentChanges(context, ecschemaDiagnostics);
 
-	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider('markdown', new Emojinfo(), {
-			providedCodeActionKinds: Emojinfo.providedCodeActionKinds
-		})
-	);
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand(COMMAND, () => vscode.env.openExternal(vscode.Uri.parse('https://unicode.org/emoji/charts-12.0/full-emoji-list.html')))
-	);
-
-	const provider1 = vscode.languages.registerCompletionItemProvider('plaintext', {
-
-		provideCompletionItems(_document: vscode.TextDocument, _position: vscode.Position, _token: vscode.CancellationToken, _context: vscode.CompletionContext) {
-
-			// a simple completion item which inserts `Hello World!`
-			const simpleCompletion = new vscode.CompletionItem('Hello World!');
-
-			// a completion item that inserts its text as snippet,
-			// the `insertText`-property is a `SnippetString` which will be
-			// honored by the editor.
-			const snippetCompletion = new vscode.CompletionItem('Good part of the day');
-			snippetCompletion.insertText = new vscode.SnippetString('Good ${1|morning,afternoon,evening|}. It is ${1}, right?');
-			const docs = new vscode.MarkdownString("Inserts a snippet that lets you select [link](x.ts).");
-			snippetCompletion.documentation = docs;
-			docs.baseUri = vscode.Uri.parse('http://example.com/a/b/c/');
-
-			// a completion item that can be accepted by a commit character,
-			// the `commitCharacters`-property is set which means that the completion will
-			// be inserted and then the character will be typed.
-			const commitCharacterCompletion = new vscode.CompletionItem('console');
-			commitCharacterCompletion.commitCharacters = ['.'];
-			commitCharacterCompletion.documentation = new vscode.MarkdownString('Press `.` to get `console.`');
-
-			// a completion item that retriggers IntelliSense when being accepted,
-			// the `command`-property is set which the editor will execute after 
-			// completion has been inserted. Also, the `insertText` is set so that 
-			// a space is inserted after `new`
-			const commandCompletion = new vscode.CompletionItem('new');
-			commandCompletion.kind = vscode.CompletionItemKind.Keyword;
-			commandCompletion.insertText = 'new ';
-			commandCompletion.command = { command: 'editor.action.triggerSuggest', title: 'Re-trigger completions...' };
-
-			// return all completion items as array
-			return [
-				simpleCompletion,
-				snippetCompletion,
-				commitCharacterCompletion,
-				commandCompletion
-			];
-		}
-	});
-
-	const provider2 = vscode.languages.registerCompletionItemProvider(
-		'plaintext',
-		{
-			provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-
-				// get all text until the `position` and check if it reads `console.`
-				// and if so then complete if `log`, `warn`, and `error`
-				const linePrefix = document.lineAt(position).text.slice(0, position.character);
-				if (!linePrefix.endsWith('console.')) {
-					return undefined;
-				}
-
-				return [
-					new vscode.CompletionItem('log', vscode.CompletionItemKind.Method),
-					new vscode.CompletionItem('warn', vscode.CompletionItemKind.Method),
-					new vscode.CompletionItem('error', vscode.CompletionItemKind.Method),
-				];
-			}
-		},
-		'.' // triggered whenever a '.' is being typed
-	);
-
-	context.subscriptions.push(provider1, provider2);
-
-	// Diagnostic provider
-	const collection = vscode.languages.createDiagnosticCollection('test');
-	if (vscode.window.activeTextEditor) {
-		updateDiagnostics(vscode.window.activeTextEditor.document, collection);
-	}
-	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => {
-		if (editor) {
-			updateDiagnostics(editor.document, collection);
-		}
-	}));
-}
-
-
-function updateDiagnostics(document: vscode.TextDocument, collection: vscode.DiagnosticCollection): void {
-	if (document && path.basename(document.uri.fsPath) === 'sample-demo.rs') {
-		collection.set(document.uri, [{
-			code: '',
-			message: 'cannot assign twice to immutable variable `x`',
-			range: new vscode.Range(new vscode.Position(3, 4), new vscode.Position(3, 10)),
-			severity: vscode.DiagnosticSeverity.Error,
-			source: '',
-			relatedInformation: [
-				new vscode.DiagnosticRelatedInformation(new vscode.Location(document.uri, new vscode.Range(new vscode.Position(1, 8), new vscode.Position(1, 9))), 'first assignment to `x`')
-			]
-		}]);
-	} else {
-		collection.clear();
-	}
-}
-
-interface IParsedToken {
-	line: number;
-	startCharacter: number;
-	length: number;
-	tokenType: string;
-	tokenModifiers: string[];
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider('xml', new ECSchemaCompletionItemProvider(), '<')
+    );
 }
 
 class DocumentSemanticTokensProvider implements vscode.DocumentSemanticTokensProvider {
-	async provideDocumentSemanticTokens(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.SemanticTokens> {
-		const allTokens = this._parseText(document.getText());
-		const builder = new vscode.SemanticTokensBuilder();
-		allTokens.forEach((token) => {
-			builder.push(token.line, token.startCharacter, token.length, this._encodeTokenType(token.tokenType), this._encodeTokenModifiers(token.tokenModifiers));
-		});
-		return builder.build();
-	}
+    async provideDocumentSemanticTokens(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.SemanticTokens> {
+        const allTokens = this._parseText(document.getText());
+        const builder = new vscode.SemanticTokensBuilder();
+        allTokens.forEach((token) => {
+            builder.push(token.line, token.startCharacter, token.length, this._encodeTokenType(token.tokenType), this._encodeTokenModifiers(token.tokenModifiers));
+        });
+        return builder.build();
+    }
 
-	private _encodeTokenType(tokenType: string): number {
-		if (tokenTypes.has(tokenType)) {
-			return tokenTypes.get(tokenType)!;
-		} else if (tokenType === 'notInLegend') {
-			return tokenTypes.size + 2;
-		}
-		return 0;
-	}
+    private _encodeTokenType(tokenType: string): number {
+        return tokenTypes.get(tokenType) ?? 0;
+    }
 
-	private _encodeTokenModifiers(strTokenModifiers: string[]): number {
-		let result = 0;
-		for (const tokenModifier of strTokenModifiers) {
-			if (tokenModifiers.has(tokenModifier)) {
-				result = result | (1 << tokenModifiers.get(tokenModifier)!);
-			} else if (tokenModifier === 'notInLegend') {
-				result = result | (1 << tokenModifiers.size + 2);
-			}
-		}
-		return result;
-	}
+    private _encodeTokenModifiers(tokenModifiers: string[]): number {
+        let result = 0;
+        for (const tokenModifier of tokenModifiers) {
+            result |= (1 << (tokenModifiers.indexOf(tokenModifier) ?? 0));
+        }
+        return result;
+    }
 
-	private _parseText(text: string): IParsedToken[] {
-		const r: IParsedToken[] = [];
-		const lines = text.split(/\r\n|\r|\n/);
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			let currentOffset = 0;
-			do {
-				const openOffset = line.indexOf('[', currentOffset);
-				if (openOffset === -1) {
-					break;
-				}
-				const closeOffset = line.indexOf(']', openOffset);
-				if (closeOffset === -1) {
-					break;
-				}
-				const tokenData = this._parseTextToken(line.substring(openOffset + 1, closeOffset));
-				r.push({
-					line: i,
-					startCharacter: openOffset + 1,
-					length: closeOffset - openOffset - 1,
-					tokenType: tokenData.tokenType,
-					tokenModifiers: tokenData.tokenModifiers
-				});
-				currentOffset = closeOffset;
-				// eslint-disable-next-line no-constant-condition
-			} while (true);
-		}
-		return r;
-	}
-
-	private _parseTextToken(text: string): { tokenType: string; tokenModifiers: string[]; } {
-		const parts = text.split('.');
-		return {
-			tokenType: parts[0],
-			tokenModifiers: parts.slice(1)
-		};
-	}
+    private _parseText(text: string): IParsedToken[] {
+        const tokens: IParsedToken[] = [];
+        const lines = text.split(/\r\n|\r|\n/);
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line.includes('<ECSchema')) {
+                tokens.push({
+                    line: i,
+                    startCharacter: 0,
+                    length: line.length,
+                    tokenType: 'invalid',
+                    tokenModifiers: []
+                });
+            }
+        }
+        return tokens;
+    }
 }
 
+class ECSchemaCodeActionsProvider implements vscode.CodeActionProvider {
+    public static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
 
-/**
- * Provides code actions for converting :) to a smiley emoji.
- */
-export class Emojizer implements vscode.CodeActionProvider {
+    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): vscode.CodeAction[] | undefined {
+        const diagnostics = vscode.languages.getDiagnostics(document.uri);
+        const duplicateAttributes = diagnostics.filter(diagnostic => diagnostic.message.includes('Duplicate attribute'));
 
-	public static readonly providedCodeActionKinds = [
-		vscode.CodeActionKind.QuickFix
-	];
+        return duplicateAttributes.map(diagnostic => this.createRemoveDuplicateFix(document, diagnostic.range));
+    }
 
-	public provideCodeActions(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction[] | undefined {
-		if (!this.isAtStartOfSmiley(document, range)) {
-			return;
-		}
-
-		const replaceWithSmileyCatFix = this.createFix(document, range, '😺');
-
-		const replaceWithSmileyFix = this.createFix(document, range, '😀');
-		// Marking a single fix as `preferred` means that users can apply it with a
-		// single keyboard shortcut using the `Auto Fix` command.
-		replaceWithSmileyFix.isPreferred = true;
-
-		const replaceWithSmileyHankyFix = this.createFix(document, range, '💩');
-
-		const commandAction = this.createCommand();
-
-		return [
-			replaceWithSmileyCatFix,
-			replaceWithSmileyFix,
-			replaceWithSmileyHankyFix,
-			commandAction
-		];
-	}
-
-	private isAtStartOfSmiley(document: vscode.TextDocument, range: vscode.Range) {
-		const start = range.start;
-		const line = document.lineAt(start.line);
-		return line.text[start.character] === ':' && line.text[start.character + 1] === ')';
-	}
-
-	private createFix(document: vscode.TextDocument, range: vscode.Range, emoji: string): vscode.CodeAction {
-		const fix = new vscode.CodeAction(`Convert to ${emoji}`, vscode.CodeActionKind.QuickFix);
-		fix.edit = new vscode.WorkspaceEdit();
-		fix.edit.replace(document.uri, new vscode.Range(range.start, range.start.translate(0, 2)), emoji);
-		return fix;
-	}
-
-	private createCommand(): vscode.CodeAction {
-		const action = new vscode.CodeAction('Learn more...', vscode.CodeActionKind.Empty);
-		action.command = { command: COMMAND, title: 'Learn more about emojis', tooltip: 'This will open the unicode emoji page.' };
-		return action;
-	}
+    private createRemoveDuplicateFix(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction {
+        const fix = new vscode.CodeAction('Remove duplicate attribute', vscode.CodeActionKind.QuickFix);
+        fix.edit = new vscode.WorkspaceEdit();
+        fix.edit.delete(document.uri, range);
+        return fix;
+    }
 }
 
-/**
- * Provides code actions corresponding to diagnostic problems.
- */
-export class Emojinfo implements vscode.CodeActionProvider {
+class ECSchemaCompletionItemProvider implements vscode.CompletionItemProvider {
+    provideCompletionItems(document: vscode.TextDocument, position: vscode.Position): vscode.CompletionItem[] {
+        const lineText = document.lineAt(position).text;
+        if (!lineText.includes('<ECSchema')) {
+            return [];
+        }
 
-	public static readonly providedCodeActionKinds = [
-		vscode.CodeActionKind.QuickFix
-	];
-
-	provideCodeActions(_document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
-		// for each diagnostic entry that has the matching `code`, create a code action command
-		return context.diagnostics
-			.filter(diagnostic => diagnostic.code === EMOJI_MENTION)
-			.map(diagnostic => this.createCommandCodeAction(diagnostic));
-	}
-
-	private createCommandCodeAction(diagnostic: vscode.Diagnostic): vscode.CodeAction {
-		const action = new vscode.CodeAction('Learn more...', vscode.CodeActionKind.QuickFix);
-		action.command = { command: COMMAND, title: 'Learn more about emojis', tooltip: 'This will open the unicode emoji page.' };
-		action.diagnostics = [diagnostic];
-		action.isPreferred = true;
-		return action;
-	}
+        const missingAttributes = REQUIRED_ATTRIBUTES.filter(attr => !lineText.includes(attr));
+        return missingAttributes.map(attr => new vscode.CompletionItem(attr, vscode.CompletionItemKind.Property));
+    }
 }
 
+function subscribeToDocumentChanges(context: vscode.ExtensionContext, ecschemaDiagnostics: vscode.DiagnosticCollection): void {
+    if (vscode.window.activeTextEditor) {
+        refreshDiagnostics(vscode.window.activeTextEditor.document, ecschemaDiagnostics);
+    }
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            if (editor) {
+                refreshDiagnostics(editor.document, ecschemaDiagnostics);
+            }
+        })
+    );
 
-/**
- * Analyzes the text document for problems. 
- * This demo diagnostic problem provider finds all mentions of 'emoji'.
- * @param doc text document to analyze
- * @param emojiDiagnostics diagnostic collection
- */
-export function refreshDiagnostics(doc: vscode.TextDocument, emojiDiagnostics: vscode.DiagnosticCollection): void {
-	const diagnostics: vscode.Diagnostic[] = [];
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(e => refreshDiagnostics(e.document, ecschemaDiagnostics))
+    );
 
-	for (let lineIndex = 0; lineIndex < doc.lineCount; lineIndex++) {
-		const lineOfText = doc.lineAt(lineIndex);
-		if (lineOfText.text.includes(EMOJI)) {
-			diagnostics.push(createDiagnostic(doc, lineOfText, lineIndex));
-		}
-	}
-
-	emojiDiagnostics.set(doc.uri, diagnostics);
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument(doc => ecschemaDiagnostics.delete(doc.uri))
+    );
 }
 
-function createDiagnostic(doc: vscode.TextDocument, lineOfText: vscode.TextLine, lineIndex: number): vscode.Diagnostic {
-	// find where in the line of that the 'emoji' is mentioned
-	const index = lineOfText.text.indexOf(EMOJI);
+function refreshDiagnostics(doc: vscode.TextDocument, ecschemaDiagnostics: vscode.DiagnosticCollection): void {
+    const diagnostics: vscode.Diagnostic[] = [];
+    const text = doc.getText();
+    const rootElementMatch = text.match(/<ECSchema\s+([^>]+)>/);
 
-	// create range that represents, where in the document the word is
-	const range = new vscode.Range(lineIndex, index, lineIndex, index + EMOJI.length);
+    if (rootElementMatch) {
+        const attributesText = rootElementMatch[1];
+        const attributes = attributesText.split(/\s+/).map(attr => attr.split('=')[0]);
 
-	const diagnostic = new vscode.Diagnostic(range, "When you say 'emoji', do you want to find out more?",
-		vscode.DiagnosticSeverity.Information);
-	diagnostic.code = EMOJI_MENTION;
-	return diagnostic;
+        REQUIRED_ATTRIBUTES.forEach(attr => {
+            if (!attributes.includes(attr)) {
+                const index = text.indexOf('<ECSchema');
+                const range = new vscode.Range(doc.positionAt(index), doc.positionAt(index + rootElementMatch[0].length));
+                diagnostics.push(new vscode.Diagnostic(range, `Missing attribute: ${attr}`, vscode.DiagnosticSeverity.Warning));
+            }
+        });
+
+        const duplicateAttributes = attributes.filter((attr, index) => attributes.indexOf(attr) !== index);
+        duplicateAttributes.forEach(attr => {
+            const index = attributesText.indexOf(attr);
+            const range = new vscode.Range(doc.positionAt(index), doc.positionAt(index + attr.length));
+            diagnostics.push(new vscode.Diagnostic(range, `Duplicate attribute: ${attr}`, vscode.DiagnosticSeverity.Error));
+        });
+    }
+
+    ecschemaDiagnostics.set(doc.uri, diagnostics);
 }
 
-export function subscribeToDocumentChanges(context: vscode.ExtensionContext, emojiDiagnostics: vscode.DiagnosticCollection): void {
-	if (vscode.window.activeTextEditor) {
-		refreshDiagnostics(vscode.window.activeTextEditor.document, emojiDiagnostics);
-	}
-	context.subscriptions.push(
-		vscode.window.onDidChangeActiveTextEditor(editor => {
-			if (editor) {
-				refreshDiagnostics(editor.document, emojiDiagnostics);
-			}
-		})
-	);
-
-	context.subscriptions.push(
-		vscode.workspace.onDidChangeTextDocument(e => refreshDiagnostics(e.document, emojiDiagnostics))
-	);
-
-	context.subscriptions.push(
-		vscode.workspace.onDidCloseTextDocument(doc => emojiDiagnostics.delete(doc.uri))
-	);
-
+interface IParsedToken {
+    line: number;
+    startCharacter: number;
+    length: number;
+    tokenType: string;
+    tokenModifiers: string[];
 }
