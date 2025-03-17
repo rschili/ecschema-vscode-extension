@@ -16,12 +16,13 @@ const legend = (function() {
 })();
 
 export function activate(context: vscode.ExtensionContext) {
+    const selector: vscode.DocumentFilter = { language: 'xml', pattern: '**/*.ecschema.xml' };
     context.subscriptions.push(
-        vscode.languages.registerDocumentSemanticTokensProvider({ language: 'xml', pattern: '**/*.ecschema.xml' }, new DocumentSemanticTokensProvider(), legend)
+        vscode.languages.registerDocumentSemanticTokensProvider(selector, new DocumentSemanticTokensProvider(), legend)
     );
 
     context.subscriptions.push(
-        vscode.languages.registerCodeActionsProvider('xml', new ECSchemaCodeActionsProvider(), {
+        vscode.languages.registerCodeActionsProvider(selector, new ECSchemaCodeActionsProvider(), {
             providedCodeActionKinds: ECSchemaCodeActionsProvider.providedCodeActionKinds
         })
     );
@@ -32,8 +33,22 @@ export function activate(context: vscode.ExtensionContext) {
     subscribeToDocumentChanges(context, ecschemaDiagnostics);
 
     context.subscriptions.push(
-        vscode.languages.registerCompletionItemProvider('xml', new ECSchemaCompletionItemProvider(), '<')
+        vscode.languages.registerCompletionItemProvider(selector, new ECSchemaCompletionItemProvider(), '<')
     );
+
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider(selector, new ECSchemaHoverProvider()));
+}
+
+class ECSchemaHoverProvider implements vscode.HoverProvider {
+    provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
+        const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
+        if (range) {
+            const word = document.getText(range);
+            return new vscode.Hover(`Hovering over: ${word}`);
+        }
+        return undefined;
+    }
 }
 
 class DocumentSemanticTokensProvider implements vscode.DocumentSemanticTokensProvider {
