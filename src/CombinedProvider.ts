@@ -1,24 +1,6 @@
 
 import * as vscode from 'vscode';
-
-const tokenTypes = new Map<string, number>();
-const tokenModifiers = new Map<string, number>();
-export const legend = (function() {
-	const tokenTypesLegend = [
-		'comment', 'string', 'keyword', 'number', 'regexp', 'operator', 'namespace',
-		'type', 'struct', 'class', 'interface', 'enum', 'typeParameter', 'function',
-		'method', 'decorator', 'macro', 'variable', 'parameter', 'property', 'label'
-	];
-	tokenTypesLegend.forEach((tokenType, index) => tokenTypes.set(tokenType, index));
-
-	const tokenModifiersLegend = [
-		'declaration', 'documentation', 'readonly', 'static', 'abstract', 'deprecated',
-		'modification', 'async'
-	];
-	tokenModifiersLegend.forEach((tokenModifier, index) => tokenModifiers.set(tokenModifier, index));
-
-	return new vscode.SemanticTokensLegend(tokenTypesLegend, tokenModifiersLegend);
-})();
+import { encodeTokenModifiers, encodeTokenType, TokenModifier, TokenType } from "./SemanticTokens";
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
@@ -35,6 +17,7 @@ export class CombinedProvider implements vscode.DefinitionProvider,
     }
 
     public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Definition | undefined> {
+        this.outputChannel.appendLine(`Providing definition for ${document.uri.toString()}`);
         const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
         if (range) {
             return new vscode.Location(document.uri, range);
@@ -43,6 +26,7 @@ export class CombinedProvider implements vscode.DefinitionProvider,
     }
 
     public async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
+        this.outputChannel.appendLine(`Providing hover for ${document.uri.toString()}`);
         const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
         if (range) {
             const word = document.getText(range);
@@ -52,15 +36,14 @@ export class CombinedProvider implements vscode.DefinitionProvider,
     }
 
     public async provideDocumentSemanticTokens(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.SemanticTokens> {
-        const allTokens = this._parseText(document.getText());
+        this.outputChannel.appendLine(`Providing semantic tokens for ${document.uri.toString()}`);
         const builder = new vscode.SemanticTokensBuilder();
-        allTokens.forEach((token) => {
-            builder.push(token.line, token.startCharacter, token.length, this._encodeTokenType(token.tokenType), this._encodeTokenModifiers(token.tokenModifiers));
-        });
+        builder.push(1, 2, 3, encodeTokenType(TokenType.Class), encodeTokenModifiers(TokenModifier.Declaration));
         return builder.build();
     }
 
     public async provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {
+        this.outputChannel.appendLine(`Providing code actions for ${document.uri.toString()}`);
         const diagnostics = vscode.languages.getDiagnostics(document.uri);
         const duplicateAttributes = diagnostics.filter(diagnostic => diagnostic.message.includes('Duplicate attribute'));
 
@@ -68,6 +51,7 @@ export class CombinedProvider implements vscode.DefinitionProvider,
     }
 
     public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.CompletionItem[] | undefined> {
+        this.outputChannel.appendLine(`Providing completions for ${document.uri.toString()}`);
         const lineText = document.lineAt(position).text;
         if (!lineText.includes('<ECSchema')) {
             return undefined;
@@ -77,9 +61,15 @@ export class CombinedProvider implements vscode.DefinitionProvider,
         return missingAttributes.map(attr => new vscode.CompletionItem(attr, vscode.CompletionItemKind.Property));
     }
 
-    public async provideDiagnostics(doc: vscode.TextDocument, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
+    public async provideDiagnosticsAfterChange(changes: vscode.TextDocumentChangeEvent, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
+        this.outputChannel.appendLine(`Generating diagnostics for ${changes.document.uri.toString()}, isChangeEvent: ${changes.contentChanges.length > 0}`);
+    }
+
+    public async provideFullDiagnostics(editor: vscode.TextEditor, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
         const diagnostics: vscode.Diagnostic[] = [];
+        const doc = editor.document;
         const text = doc.getText();
+        this.outputChannel.appendLine(`Generating diagnostics for ${doc.uri.toString()}`);
         const rootElementMatch = text.match(/<ECSchema\s+([^>]+)>/);
     
         if (rootElementMatch) {
@@ -111,43 +101,4 @@ export class CombinedProvider implements vscode.DefinitionProvider,
         fix.edit.delete(document.uri, range);
         return fix;
     }
-
-    private _encodeTokenType(tokenType: string): number {
-        return tokenTypes.get(tokenType) ?? 0;
-    }
-
-    private _encodeTokenModifiers(tokenModifiers: string[]): number {
-        let result = 0;
-        for (const tokenModifier of tokenModifiers) {
-            result |= (1 << (tokenModifiers.indexOf(tokenModifier) ?? 0));
-        }
-        return result;
-    }
-
-    private _parseText(text: string): IParsedToken[] {
-        const tokens: IParsedToken[] = [];
-        const lines = text.split(/\r\n|\r|\n/);
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line.includes('<ECSchema')) {
-                tokens.push({
-                    line: i,
-                    startCharacter: 0,
-                    length: line.length,
-                    tokenType: 'invalid',
-                    tokenModifiers: []
-                });
-            }
-        }
-        return tokens;
-    }
-}
-
-
-interface IParsedToken {
-    line: number;
-    startCharacter: number;
-    length: number;
-    tokenType: string;
-    tokenModifiers: string[];
 }

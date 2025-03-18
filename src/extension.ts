@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import {legend, CombinedProvider } from './CombinedProvider';
+import { CombinedProvider } from './CombinedProvider';
+import { legend } from './SemanticTokens';
 
 export function activate(context: vscode.ExtensionContext) {
     const selector: vscode.DocumentFilter = { language: 'xml', pattern: '**/*.ecschema.xml' };
@@ -23,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Handle asynchronous diagnostics generation for the active editor
     if (vscode.window.activeTextEditor) {
-        provider.provideDiagnostics(vscode.window.activeTextEditor.document, diagnosticCollection).catch(err => {
+        provider.provideFullDiagnostics(vscode.window.activeTextEditor, diagnosticCollection).catch(err => {
             outputChannel.appendLine(`Error generating diagnostics during activation: ${err.message}`);
         });
     }
@@ -32,23 +33,23 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeActiveTextEditor(async editor => {
             if (editor) {
                 try {
-                    await provider.provideDiagnostics(editor.document, diagnosticCollection);
-                } catch (err) {
+                    await provider.provideFullDiagnostics(editor, diagnosticCollection);
+                } catch (err: any) {
                     outputChannel.appendLine(`Error generating diagnostics for active editor: ${err.message}`);
                 }
             }
         })
     );
 
-    context.subscriptions.push(
+    /*context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(async e => {
             try {
-                await provider.provideDiagnostics(e.document, diagnosticCollection);
-            } catch (err) {
+                await provider.provideDiagnosticsAfterChange(e, diagnosticCollection);
+            } catch (err: any) {
                 outputChannel.appendLine(`Error generating diagnostics for changed document: ${err.message}`);
             }
         })
-    );
+    );*/
 
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument(doc => {

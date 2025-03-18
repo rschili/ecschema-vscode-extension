@@ -1,30 +1,28 @@
 import * as vscode from 'vscode';
-import { XMLParser } from 'fast-xml-parser';
+import { Document, DOMParser, Node } from '@xmldom/xmldom';
 
 export class DocumentCacheEntry {
     private document: vscode.TextDocument;
-    private parser: XMLParser;
-    private parsedDocument: any;
+    private parsedDocument: Document | null = null;
     private updateTimeout: NodeJS.Timeout | null = null;
     private updatePromise: Promise<void> | null = null;
     private lastUpdateTime: number = Date.now() - 100;
+    private isDirty: boolean = true; // Indicates whether the cache is up-to-date
 
-    constructor(document: vscode.TextDocument, parser: XMLParser) {
+    constructor(document: vscode.TextDocument) {
         this.document = document;
-        this.parser = parser;
         this.update(); // Perform an initial update immediately
     }
 
-    public getParsedDocument(): any {
-        return this.parsedDocument;
+    public getParsedDocument(): Document | null {
+        return this.isDirty ? null : this.parsedDocument;
     }
 
-    /**
-     * Rate limited update. If the last update was more than 500ms ago, resolve immediately, if not, wait until at least 500ms have passed
-     * before executing the update. Discard any additional calls that may happen in between
-     */
     public async update(): Promise<void> {
         const now = Date.now();
+
+        // Mark as dirty while the update is pending
+        this.isDirty = true;
 
         // If this is the first call or 500ms have passed since the last update, resolve immediately
         if (!this.lastUpdateTime || now - this.lastUpdateTime >= 500) {
@@ -55,36 +53,64 @@ export class DocumentCacheEntry {
         return this.updatePromise;
     }
 
-    private async performUpdate(): Promise<void> {
-        const text = this.document.getText();
-        this.parsedDocument = await this.parseXML(text);
+    public getNodePosition(node: any): { line: number; column: number } | undefined {
+        if (this.isDirty) {
+            return undefined; // Return undefined if the cache is dirty
+        }
+    
+        if (node && node.lineNumber && node.columnNumber) {
+            return { line: node.lineNumber, column: node.columnNumber };
+        }
+        return undefined;
     }
 
-    private async parseXML(xml: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-            try {
-                const parsed = this.parser.parse(xml);
-                resolve(parsed);
-            } catch (error) {
-                reject(error);
+    public findNodeByPosition(document: Document, line: number, column: number): Node | undefined {
+        if (this.isDirty) {
+            return undefined; // Return undefined if the cache is dirty
+        }
+    
+        function traverse(node: Node): Node | undefined {
+            if ((node as any).lineNumber === line && (node as any).columnNumber === column) {
+                return node;
             }
+    
+            for (let i = 0; i < node.childNodes.length; i++) {
+                const result = traverse(node.childNodes[i]);
+                if (result) {
+                    return result;
+                }
+            }
+    
+            return undefined;
+        }
+    
+        return traverse(document);
+    }
+
+    private async performUpdate(): Promise<void> {
+        const text = this.document.getText();
+        this.parsedDocument = this.parseXMLWithPositions(text);
+        this.isDirty = false; // Mark as clean after the update is complete
+    }
+
+    private parseXMLWithPositions(xml: string): Document {
+        const parser = new DOMParser({
+            locator: true, // Enables position tracking
         });
+
+        const document = parser.parseFromString(xml, 'application/xml');
+        return document;
     }
 }
 
 export class DocumentCache {
     private cache: Map<string, DocumentCacheEntry> = new Map();
-    private parser: XMLParser;
-
-    constructor() {
-        this.parser = new XMLParser();
-    }
 
     public async getOrCreateEntry(uri: vscode.Uri, document: vscode.TextDocument): Promise<DocumentCacheEntry> {
         const uriString = uri.toString();
         let entry = this.cache.get(uriString);
         if (!entry) {
-            entry = new DocumentCacheEntry(document, this.parser);
+            entry = new DocumentCacheEntry(document);
             this.cache.set(uriString, entry);
         }
         await entry.update();
@@ -92,9 +118,7 @@ export class DocumentCache {
     }
 
     public async getEntry(uri: vscode.Uri): Promise<DocumentCacheEntry | undefined> {
-        const uriString = uri.toString();
-        let entry = this.cache.get(uriString);
-        return entry;
+        return this.cache.get(uri.toString());
     }
 
     public removeDocument(uri: vscode.Uri): void {
