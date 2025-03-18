@@ -1,11 +1,11 @@
-interface Attribute {
+export interface Attribute {
     name: string;
     type: string;
     description: string;
     mandatory: boolean;
 }
 
-interface Element {
+export interface Element {
     name: string;
     description: string;
     attributes: Attribute[];
@@ -13,7 +13,7 @@ interface Element {
     allowedParents?: string[];
 }
 
-const ecschemaOutline3_2: Record<string, Element> = {
+export const ecschemaOutline3_2: Record<string, Element> = {
     ECSchema: {
         name: "ECSchema",
         description: "Root element of the ECSchema XML.",
@@ -304,5 +304,3 @@ const ecschemaOutline3_2: Record<string, Element> = {
         allowedParents: ["ECSchema"]
     }
 };
-
-export { ecschemaOutline3_2 as ecschemaStructure, Attribute, Element };
