@@ -1,6 +1,7 @@
 
 import * as vscode from 'vscode';
 import { encodeTokenModifiers, encodeTokenType, TokenModifier, TokenType } from "./SemanticTokens";
+import { DocumentCache, DocumentCacheEntry } from "./Cache";
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
@@ -11,9 +12,13 @@ export class CombinedProvider implements vscode.DefinitionProvider,
                                         vscode.CompletionItemProvider {
 
     private outputChannel: vscode.OutputChannel;
+    private documentCache: DocumentCache;
+    private diagnosticCollection: vscode.DiagnosticCollection;
 
-    constructor(outputChannel: vscode.OutputChannel) {
+    constructor(outputChannel: vscode.OutputChannel, diagnosticCollection: vscode.DiagnosticCollection) {
         this.outputChannel = outputChannel;
+        this.documentCache = new DocumentCache(outputChannel);
+        this.diagnosticCollection = diagnosticCollection;
     }
 
     public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Definition | undefined> {
@@ -35,8 +40,18 @@ export class CombinedProvider implements vscode.DefinitionProvider,
         return undefined;
     }
 
-    public async provideDocumentSemanticTokens(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.SemanticTokens> {
+    public async provideDocumentSemanticTokens(document: vscode.TextDocument, _token: vscode.CancellationToken): Promise<vscode.SemanticTokens | undefined> {
         this.outputChannel.appendLine(`Providing semantic tokens for ${document.uri.toString()}`);
+        let cacheEntry:  DocumentCacheEntry;
+        try {
+            cacheEntry = await this.documentCache.getOrCreateEntry(document.uri, document);
+        } catch (e: any) {
+            this.outputChannel.appendLine(`Error getting document cache entry: ${e.message}`);
+            const diagnostics: vscode.Diagnostic[] = [];
+            const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(document.lineCount - 1, 500));
+            diagnostics.push(new vscode.Diagnostic(range, `Error parsing document: ${e.message}`, vscode.DiagnosticSeverity.Error));
+            return undefined;
+        }
         const builder = new vscode.SemanticTokensBuilder();
         builder.push(1, 2, 3, encodeTokenType(TokenType.Class), encodeTokenModifiers(TokenModifier.Declaration));
         return builder.build();
@@ -61,11 +76,11 @@ export class CombinedProvider implements vscode.DefinitionProvider,
         return missingAttributes.map(attr => new vscode.CompletionItem(attr, vscode.CompletionItemKind.Property));
     }
 
-    public async provideDiagnosticsAfterChange(changes: vscode.TextDocumentChangeEvent, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
+    public async provideDiagnosticsAfterChange(changes: vscode.TextDocumentChangeEvent): Promise<void> {
         this.outputChannel.appendLine(`Generating diagnostics for ${changes.document.uri.toString()}, isChangeEvent: ${changes.contentChanges.length > 0}`);
     }
 
-    public async provideFullDiagnostics(editor: vscode.TextEditor, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
+    public async provideFullDiagnostics(editor: vscode.TextEditor): Promise<void> {
         const diagnostics: vscode.Diagnostic[] = [];
         const doc = editor.document;
         const text = doc.getText();
@@ -92,7 +107,7 @@ export class CombinedProvider implements vscode.DefinitionProvider,
             });
         }
     
-        ecschemaDiagnostics.set(doc.uri, diagnostics);
+        this.diagnosticCollection.set(doc.uri, diagnostics);
     }
 
     private createRemoveDuplicateFix(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction {

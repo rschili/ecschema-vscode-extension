@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { Document, DOMParser, Node } from '@xmldom/xmldom';
 
+/**
+ * Xmldom is a slow parser, but we need to keep track of the position of each node in the document.
+ * This seems like the only parser that reliably does it.
+ * We rate limit the updates to the cache to avoid using too much CPU.
+ */
 export class DocumentCacheEntry {
     private document: vscode.TextDocument;
     private parsedDocument: Document | null = null;
@@ -8,10 +13,13 @@ export class DocumentCacheEntry {
     private updatePromise: Promise<void> | null = null;
     private lastUpdateTime: number = Date.now() - 100;
     private isDirty: boolean = true; // Indicates whether the cache is up-to-date
+    private parser: DOMParser = new DOMParser();
 
-    constructor(document: vscode.TextDocument) {
+    private outputChannel: vscode.OutputChannel;
+
+    constructor(document: vscode.TextDocument, outputChannel: vscode.OutputChannel) {
         this.document = document;
-        this.update(); // Perform an initial update immediately
+        this.outputChannel = outputChannel;
     }
 
     public getParsedDocument(): Document | null {
@@ -88,29 +96,37 @@ export class DocumentCacheEntry {
     }
 
     private async performUpdate(): Promise<void> {
+        const startTime = Date.now();
+        this.outputChannel.appendLine(`Starting cache update for ${this.document.uri.toString()}`);
+        
+        // Perform the parsing
         const text = this.document.getText();
         this.parsedDocument = this.parseXMLWithPositions(text);
+        
+        const endTime = Date.now();
         this.isDirty = false; // Mark as clean after the update is complete
+        this.outputChannel.appendLine(`Cache update completed for ${this.document.uri.toString()} in ${endTime - startTime}ms`);
     }
 
     private parseXMLWithPositions(xml: string): Document {
-        const parser = new DOMParser({
-            locator: true, // Enables position tracking
-        });
-
-        const document = parser.parseFromString(xml, 'application/xml');
+        const document = this.parser.parseFromString(xml, 'application/xml');
         return document;
     }
 }
 
 export class DocumentCache {
     private cache: Map<string, DocumentCacheEntry> = new Map();
+    private outputChannel: vscode.OutputChannel;
+
+    constructor(outputChannel: vscode.OutputChannel) {
+        this.outputChannel = outputChannel;
+    }
 
     public async getOrCreateEntry(uri: vscode.Uri, document: vscode.TextDocument): Promise<DocumentCacheEntry> {
         const uriString = uri.toString();
         let entry = this.cache.get(uriString);
         if (!entry) {
-            entry = new DocumentCacheEntry(document);
+            entry = new DocumentCacheEntry(document, this.outputChannel);
             this.cache.set(uriString, entry);
         }
         await entry.update();

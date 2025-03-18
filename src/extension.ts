@@ -5,8 +5,9 @@ import { legend } from './SemanticTokens';
 export function activate(context: vscode.ExtensionContext) {
     const selector: vscode.DocumentFilter = { language: 'xml', pattern: '**/*.ecschema.xml' };
     const outputChannel = vscode.window.createOutputChannel('ECSchema Extension');
-    const provider = new CombinedProvider(outputChannel);
     const diagnosticCollection = vscode.languages.createDiagnosticCollection("ecschema");
+    const provider = new CombinedProvider(outputChannel, diagnosticCollection);
+    
     outputChannel.appendLine('ECSchema extension activated');
 
     const subscriptions = [
@@ -23,8 +24,8 @@ export function activate(context: vscode.ExtensionContext) {
     subscriptions.forEach(subscription => context.subscriptions.push(subscription));
 
     // Handle asynchronous diagnostics generation for the active editor
-    if (vscode.window.activeTextEditor) {
-        provider.provideFullDiagnostics(vscode.window.activeTextEditor, diagnosticCollection).catch(err => {
+    /*if (vscode.window.activeTextEditor) {
+        provider.provideFullDiagnostics(vscode.window.activeTextEditor).catch(err => {
             outputChannel.appendLine(`Error generating diagnostics during activation: ${err.message}`);
         });
     }
@@ -33,18 +34,18 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeActiveTextEditor(async editor => {
             if (editor) {
                 try {
-                    await provider.provideFullDiagnostics(editor, diagnosticCollection);
+                    await provider.provideFullDiagnostics(editor);
                 } catch (err: any) {
                     outputChannel.appendLine(`Error generating diagnostics for active editor: ${err.message}`);
                 }
             }
         })
-    );
+    );*/
 
     /*context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(async e => {
             try {
-                await provider.provideDiagnosticsAfterChange(e, diagnosticCollection);
+                await provider.provideDiagnosticsAfterChange(e);
             } catch (err: any) {
                 outputChannel.appendLine(`Error generating diagnostics for changed document: ${err.message}`);
             }
