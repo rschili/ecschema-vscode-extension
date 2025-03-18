@@ -22,13 +22,19 @@ export const legend = (function() {
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
-export class CombinedProvider implements  vscode.DefinitionProvider,
-                                                    vscode.HoverProvider,
-                                                    vscode.DocumentSemanticTokensProvider,
-                                                    vscode.CodeActionProvider,
-                                                    vscode.CompletionItemProvider {
+export class CombinedProvider implements vscode.DefinitionProvider,
+                                        vscode.HoverProvider,
+                                        vscode.DocumentSemanticTokensProvider,
+                                        vscode.CodeActionProvider,
+                                        vscode.CompletionItemProvider {
 
-    public provideDefinition(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition> {
+    private outputChannel: vscode.OutputChannel;
+
+    constructor(outputChannel: vscode.OutputChannel) {
+        this.outputChannel = outputChannel;
+    }
+
+    public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Definition | undefined> {
         const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
         if (range) {
             return new vscode.Location(document.uri, range);
@@ -36,7 +42,7 @@ export class CombinedProvider implements  vscode.DefinitionProvider,
         return undefined;
     }
 
-    public provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
+    public async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
         const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
         if (range) {
             const word = document.getText(range);
@@ -54,24 +60,24 @@ export class CombinedProvider implements  vscode.DefinitionProvider,
         return builder.build();
     }
 
-    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): vscode.CodeAction[] | undefined {
+    public async provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {
         const diagnostics = vscode.languages.getDiagnostics(document.uri);
         const duplicateAttributes = diagnostics.filter(diagnostic => diagnostic.message.includes('Duplicate attribute'));
 
         return duplicateAttributes.map(diagnostic => this.createRemoveDuplicateFix(document, diagnostic.range));
     }
 
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position): vscode.CompletionItem[] {
+    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.CompletionItem[] | undefined> {
         const lineText = document.lineAt(position).text;
         if (!lineText.includes('<ECSchema')) {
-            return [];
+            return undefined;
         }
 
         const missingAttributes = REQUIRED_ATTRIBUTES.filter(attr => !lineText.includes(attr));
         return missingAttributes.map(attr => new vscode.CompletionItem(attr, vscode.CompletionItemKind.Property));
     }
 
-    public provideDiagnostics(doc: vscode.TextDocument, ecschemaDiagnostics: vscode.DiagnosticCollection): void {
+    public async provideDiagnostics(doc: vscode.TextDocument, ecschemaDiagnostics: vscode.DiagnosticCollection): Promise<void> {
         const diagnostics: vscode.Diagnostic[] = [];
         const text = doc.getText();
         const rootElementMatch = text.match(/<ECSchema\s+([^>]+)>/);
