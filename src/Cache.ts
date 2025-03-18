@@ -13,7 +13,7 @@ export class DocumentCacheEntry {
     private updatePromise: Promise<void> | null = null;
     private lastUpdateTime: number = Date.now() - 100;
     private isDirty: boolean = true; // Indicates whether the cache is up-to-date
-    private parser: DOMParser = new DOMParser();
+    private parser: DOMParser = new DOMParser({ locator: true });
 
     private outputChannel: vscode.OutputChannel;
 
@@ -101,16 +101,11 @@ export class DocumentCacheEntry {
         
         // Perform the parsing
         const text = this.document.getText();
-        this.parsedDocument = this.parseXMLWithPositions(text);
+        this.parsedDocument = this.parser.parseFromString(text, 'application/xml');
         
         const endTime = Date.now();
         this.isDirty = false; // Mark as clean after the update is complete
         this.outputChannel.appendLine(`Cache update completed for ${this.document.uri.toString()} in ${endTime - startTime}ms`);
-    }
-
-    private parseXMLWithPositions(xml: string): Document {
-        const document = this.parser.parseFromString(xml, 'application/xml');
-        return document;
     }
 }
 
