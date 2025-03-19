@@ -1,3 +1,5 @@
+import { TokenType } from "./SemanticTokens";
+
 export interface Attribute {
     name: string;
     type: string;
@@ -11,11 +13,13 @@ export interface Element {
     attributes: Attribute[];
     allowedChildren?: string[];
     allowedParents?: string[];
+    tokenType: TokenType;
 }
 
 export const ecschemaOutline3_2: Record<string, Element> = {
     ECSchema: {
         name: "ECSchema",
+        tokenType: TokenType.Namespace,
         description: "Root element of the ECSchema XML.",
         attributes: [
             { name: "schemaName", type: "string", description: "The name of the schema.", mandatory: true },
@@ -29,6 +33,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECSchemaReference: {
         name: "ECSchemaReference",
+        tokenType: TokenType.TypeParameter,
         description: "Allows one ECSchema to refer to others.",
         attributes: [
             { name: "name", type: "string", description: "The name of the referenced schema.", mandatory: true },
@@ -39,6 +44,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECCustomAttributeClass: {
         name: "ECCustomAttributeClass",
+        tokenType: TokenType.Class,
         description: "Defines a custom attribute class.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the custom attribute class.", mandatory: true },
@@ -51,6 +57,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECCustomAttributes: {
         name: "ECCustomAttributes",
+        tokenType: TokenType.TypeParameter,
         description: "Contains custom attributes applied to an element.",
         attributes: [],
         allowedChildren: ["*"],
@@ -58,6 +65,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECEnumeration: {
         name: "ECEnumeration",
+        tokenType: TokenType.Enum,
         description: "Defines an enumeration.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the enumeration.", mandatory: true },
@@ -71,6 +79,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECEnumerator: {
         name: "ECEnumerator",
+        tokenType: TokenType.EnumMember,
         description: "Defines an enumerator within an enumeration.",
         attributes: [
             { name: "name", type: "string", description: "The name of the enumerator.", mandatory: true },
@@ -81,6 +90,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECEntityClass: {
         name: "ECEntityClass",
+        tokenType: TokenType.Class,
         description: "Defines an entity class.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the entity class.", mandatory: true },
@@ -93,6 +103,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECStructClass: {
         name: "ECStructClass",
+        tokenType: TokenType.Class,
         description: "Defines a struct class.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the struct class.", mandatory: true },
@@ -104,12 +115,14 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     BaseClass: {
         name: "BaseClass",
+        tokenType: TokenType.Interface,
         description: "Specifies the base class of the entity class.",
         attributes: [],
         allowedParents: ["ECEntityClass"]
     },
     ECProperty: {
         name: "ECProperty",
+        tokenType: TokenType.Property,
         description: "Defines a property within an entity class.",
         attributes: [
             { name: "propertyName", type: "string", description: "The name of the property.", mandatory: true },
@@ -123,6 +136,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECArrayProperty: {
         name: "ECArrayProperty",
+        tokenType: TokenType.Property,
         description: "Defines an array property within an entity class.",
         attributes: [
             { name: "propertyName", type: "string", description: "The name of the array property.", mandatory: true },
@@ -135,6 +149,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECStructProperty: {
         name: "ECStructProperty",
+        tokenType: TokenType.Property,
         description: "Defines a struct property within an entity class.",
         attributes: [
             { name: "propertyName", type: "string", description: "The name of the struct property.", mandatory: true },
@@ -145,6 +160,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECStructArrayProperty: {
         name: "ECStructArrayProperty",
+        tokenType: TokenType.Property,
         description: "Defines a struct array property within an entity class.",
         attributes: [
             { name: "propertyName", type: "string", description: "The name of the struct array property.", mandatory: true },
@@ -157,6 +173,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECNavigationProperty: {
         name: "ECNavigationProperty",
+        tokenType: TokenType.Property,
         description: "Defines a navigation property within an entity class.",
         attributes: [
             { name: "propertyName", type: "string", description: "The name of the navigation property.", mandatory: true },
@@ -168,6 +185,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     ECRelationshipClass: {
         name: "ECRelationshipClass",
+        tokenType: TokenType.Class,
         description: "Defines a relationship class.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the relationship class.", mandatory: true },
@@ -180,6 +198,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Source: {
         name: "Source",
+        tokenType: TokenType.Type,
         description: "Defines the source of the relationship.",
         attributes: [
             { name: "multiplicity", type: "string", description: "The multiplicity of the source.", mandatory: false },
@@ -191,6 +210,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Target: {
         name: "Target",
+        tokenType: TokenType.Type,
         description: "Defines the target of the relationship.",
         attributes: [
             { name: "multiplicity", type: "string", description: "The multiplicity of the target.", mandatory: false },
@@ -202,6 +222,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Class: {
         name: "Class",
+        tokenType: TokenType.Class,
         description: "Specifies the class of the source or target.",
         attributes: [
             { name: "class", type: "string", description: "The class of the source or target.", mandatory: true }
@@ -210,6 +231,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     KindOfQuantity: {
         name: "KindOfQuantity",
+        tokenType: TokenType.Type,
         description: "Defines a kind of quantity.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the kind of quantity.", mandatory: true },
@@ -221,6 +243,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     PropertyCategory: {
         name: "PropertyCategory",
+        tokenType: TokenType.Type,
         description: "Defines a property category.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the property category.", mandatory: true },
@@ -230,6 +253,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Format: {
         name: "Format",
+        tokenType: TokenType.Type,
         description: "Defines a format.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the format.", mandatory: true },
@@ -250,6 +274,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     UnitSystem: {
         name: "UnitSystem",
+        tokenType: TokenType.Type,
         description: "Defines a unit system.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the unit system.", mandatory: true },
@@ -260,6 +285,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Unit: {
         name: "Unit",
+        tokenType: TokenType.Type,
         description: "Defines a unit.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the unit.", mandatory: true },
@@ -274,6 +300,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     InvertedUnit: {
         name: "InvertedUnit",
+        tokenType: TokenType.Type,
         description: "Defines an inverted unit.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the inverted unit.", mandatory: true },
@@ -284,6 +311,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Constant: {
         name: "Constant",
+        tokenType: TokenType.Type,
         description: "Defines a constant.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the constant.", mandatory: true },
@@ -296,6 +324,7 @@ export const ecschemaOutline3_2: Record<string, Element> = {
     },
     Phenomenon: {
         name: "Phenomenon",
+        tokenType: TokenType.Type,
         description: "Defines a phenomenon.",
         attributes: [
             { name: "typeName", type: "string", description: "The name of the phenomenon.", mandatory: true },

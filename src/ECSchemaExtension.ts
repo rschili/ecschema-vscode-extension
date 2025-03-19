@@ -2,7 +2,9 @@
 import * as vscode from 'vscode';
 import { encodeTokenModifiers, encodeTokenType, legend, TokenModifier, TokenType } from "./SemanticTokens";
 import { DocumentCache, DocumentCacheEntry } from "./Cache";
-import { getRangeForNode, isElement, isAttribute } from './Xml';
+import { getRangeForNode, isElement, isAttribute, getPositionDataForNode } from './Xml';
+import { ecschemaOutline3_2, Element } from './ECSchemaOutline';
+import { Node } from "@xmldom/xmldom";
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
@@ -72,18 +74,7 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
 
         let tokens: vscode.SemanticTokens;
         try {
-        builder.push(getRangeForNode(rootNode), TokenType.Keyword, [TokenModifier.Declaration]);
-
-        for(const node of rootNode.childNodes) {
-            if(isElement(node)) {
-                builder.push(getRangeForNode(node), TokenType.Keyword, [TokenModifier.Declaration]);
-                for(const subNode of node.childNodes) {
-                    if(isElement(subNode)) {
-                        builder.push(getRangeForNode(subNode), TokenType.Keyword, [TokenModifier.Declaration]);
-                    }
-                }
-            }
-        }
+        this.TokenizeElement(builder, rootNode);
         tokens = builder.build();
         } catch (e: any) {
             this.outputChannel.appendLine(`Error building semantic tokens: ${e.message}`);
@@ -92,6 +83,43 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
 
         this.outputChannel.appendLine(`Returning semantic tokens`);
         return tokens;
+    }
+
+    private TokenizeElement(builder: vscode.SemanticTokensBuilder, element: Node) {
+        if(element.localName === null) {
+            return;
+        }
+
+        const outline = ecschemaOutline3_2[element.localName];
+        if(!outline) {
+            const range = getRangeForNode(element);
+            const diagnostic = new vscode.Diagnostic(range, `Unexpected element: ${element.localName}`, vscode.DiagnosticSeverity.Warning);
+            this.diagnosticCollection.set(vscode.Uri.parse(element.baseURI || ''), [diagnostic]);
+            return;
+        }
+
+        this.AddSemanticToken(builder, element, outline.tokenType, TokenModifier.Declaration);
+        if(element.hasChildNodes()) {
+            for(const child of element.childNodes) {
+                if(isElement(child) && child.localName !== null) {
+                    if(outline.allowedChildren !== undefined && outline.allowedChildren.includes(child.localName)) {
+                        this.TokenizeElement(builder, child);
+                    } else {
+                        const range = getRangeForNode(child);
+                        const diagnostic = new vscode.Diagnostic(range, `Unexpected child element: ${child.localName}`, vscode.DiagnosticSeverity.Warning);
+                        this.diagnosticCollection.set(vscode.Uri.parse(child.baseURI || ''), [diagnostic]);
+                    }
+                } else if(isAttribute(child)) {
+                    
+                }
+            }
+        }
+
+    }
+
+    private AddSemanticToken(builder: vscode.SemanticTokensBuilder, node: Node, tokenType: TokenType, tokenModifier?: TokenModifier) {
+        const positionData = getPositionDataForNode(node);
+        builder.push(positionData.line, positionData.char, positionData.length, encodeTokenType(tokenType), tokenModifier ? encodeTokenModifiers(tokenModifier) : undefined);
     }
 
     public async provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {

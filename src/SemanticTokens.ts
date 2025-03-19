@@ -1,39 +1,43 @@
 import * as vscode from 'vscode';
 
-// Define enums for token types and modifiers
+// Generated from standard token types https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide
 export enum TokenType {
-    Comment = 'comment',
-    String = 'string',
-    Keyword = 'keyword',
-    Number = 'number',
-    Regexp = 'regexp',
-    Operator = 'operator',
-    Namespace = 'namespace',
-    Type = 'type',
-    Struct = 'struct',
-    Class = 'class',
-    Interface = 'interface',
-    Enum = 'enum',
-    TypeParameter = 'typeParameter',
-    Function = 'function',
-    Method = 'method',
-    Decorator = 'decorator',
-    Macro = 'macro',
-    Variable = 'variable',
-    Parameter = 'parameter',
-    Property = 'property',
-    Label = 'label'
+    Namespace = 'namespace', // For identifiers that declare or reference a namespace, module, or package.
+    Class = 'class', // For identifiers that declare or reference a class type.
+    Enum = 'enum', // For identifiers that declare or reference an enumeration type.
+    Interface = 'interface', // For identifiers that declare or reference an interface type.
+    Struct = 'struct', // For identifiers that declare or reference a struct type.
+    TypeParameter = 'typeParameter', // For identifiers that declare or reference a type parameter.
+    Type = 'type', // For identifiers that declare or reference a type that is not covered above.
+    Parameter = 'parameter', // For identifiers that declare or reference a function or method parameter.
+    Variable = 'variable', // For identifiers that declare or reference a local or global variable.
+    Property = 'property', // For identifiers that declare or reference a member property, member field, or member variable.
+    EnumMember = 'enumMember', // For identifiers that declare or reference an enumeration property, constant, or member.
+    Decorator = 'decorator', // For identifiers that declare or reference decorators and annotations.
+    Event = 'event', // For identifiers that declare an event property.
+    Function = 'function', // For identifiers that declare a function.
+    Method = 'method', // For identifiers that declare a member function or method.
+    Macro = 'macro', // For identifiers that declare a macro.
+    Label = 'label', // For identifiers that declare a label.
+    Comment = 'comment', // For tokens that represent a comment.
+    String = 'string', // For tokens that represent a string literal.
+    Keyword = 'keyword', // For tokens that represent a language keyword.
+    Number = 'number', // For tokens that represent a number literal.
+    Regexp = 'regexp', // For tokens that represent a regular expression literal.
+    Operator = 'operator' // For tokens that represent an operator.
 }
 
 export enum TokenModifier {
-    Declaration = 'declaration',
-    Documentation = 'documentation',
-    Readonly = 'readonly',
-    Static = 'static',
-    Abstract = 'abstract',
-    Deprecated = 'deprecated',
-    Modification = 'modification',
-    Async = 'async'
+    Declaration = 'declaration', // For declarations of symbols.
+    Definition = 'definition', // For definitions of symbols, for example, in header files.
+    Readonly = 'readonly', // For readonly variables and member fields (constants).
+    Static = 'static', // For class members (static members).
+    Deprecated = 'deprecated', // For symbols that should no longer be used.
+    Abstract = 'abstract', // For types and member functions that are abstract.
+    Async = 'async', // For functions that are marked async.
+    Modification = 'modification', // For variable references where the variable is assigned to.
+    Documentation = 'documentation', // For occurrences of symbols in documentation.
+    DefaultLibrary = 'defaultLibrary' // For symbols that are part of the standard library.
 }
 
 // Convert enums to arrays for use in SemanticTokensLegend
