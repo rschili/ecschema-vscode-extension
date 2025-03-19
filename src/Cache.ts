@@ -80,27 +80,48 @@ export class DocumentCacheEntry {
         return undefined;
     }
 
-    public findNodeByPosition(document: Document, line: number, column: number): Node | undefined {
+    public findNodeByPosition(line: number, column: number): Node | undefined {
         if (this._isDirty) {
             return undefined; // Return undefined if the cache is dirty
         }
     
-        function traverse(node: Node): Node | undefined {
-            if ((node as any).lineNumber === line && (node as any).columnNumber === column) {
+        function isLeft(node: Node): boolean {
+            if(!node.lineNumber || !node.columnNumber) {
+                return false;
+            }
+
+            if (node.lineNumber < line) {
+                return true;
+            } else if (node.lineNumber === line && node.columnNumber < column) {
+                return true;
+            }
+
+            return false;
+        }
+    
+        function findNearestLeftNeighbour(node: Node): Node {
+            if(!node.hasChildNodes) {
                 return node;
             }
-    
-            for (let i = 0; i < node.childNodes.length; i++) {
-                const result = traverse(node.childNodes[i]);
-                if (result) {
+
+            let result: Node = node;
+            for (let child of node.childNodes) {
+                if (isLeft(child)) {
+                    result = child;
+                } else {
                     return result;
                 }
             }
-    
-            return undefined;
+
+            return findNearestLeftNeighbour(result);
         }
-    
-        return traverse(document);
+
+        const candidate = findNearestLeftNeighbour(this.xml);
+        if (candidate.lineNumber === line && candidate.columnNumber && candidate.localName &&
+            candidate.columnNumber <= column && candidate.columnNumber + candidate.localName.length >= column) {
+            return candidate;
+        }
+        return undefined;
     }
 
     private async performUpdate(): Promise<void> {

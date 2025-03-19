@@ -35,12 +35,27 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
     }
 
     public async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
-        this.outputChannel.appendLine(`Providing hover for ${document.uri.toString()}`);
-        const range = document.getWordRangeAtPosition(position, /<ECSchema[^>]*>/);
-        if (range) {
-            const word = document.getText(range);
-            return new vscode.Hover(`Hovering over: ${word}`);
+        this.outputChannel.appendLine(`Providing hover for ${document.uri.toString()}, position: ${position.line}:${position.character}`);
+        const cacheEntry = await this.documentCache.getEntry(document.uri);
+        if (!cacheEntry) {
+            this.outputChannel.appendLine(`Document not in cache`);
+            return undefined; // Cannot provide hover if the document is not in cache or is dirty
         }
+
+        const hoverNode = cacheEntry.findNodeByPosition(position.line + 1, position.character);
+        if (!hoverNode) {
+            this.outputChannel.appendLine(`No node found at position`);
+            return undefined;
+        }
+
+        if(hoverNode.nodeType === 1 && hoverNode.localName !== null) {
+            const outline = ecschemaOutline3_2[hoverNode.localName];
+            if(outline) {
+                return new vscode.Hover(outline.description);
+            }
+        }
+
+        this.outputChannel.appendLine(`No hover information found`);
         return undefined;
     }
 
