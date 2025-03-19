@@ -8,11 +8,11 @@ import { Document, DOMParser, Node } from '@xmldom/xmldom';
  */
 export class DocumentCacheEntry {
     private document: vscode.TextDocument;
-    private parsedDocument: Document | null = null;
+    private parsedDocument?: Document
     private updateTimeout: NodeJS.Timeout | null = null;
     private updatePromise: Promise<void> | null = null;
     private lastUpdateTime: number = Date.now() - 100;
-    private isDirty: boolean = true; // Indicates whether the cache is up-to-date
+    private _isDirty: boolean = true; // Indicates whether the cache is up-to-date
     private parser: DOMParser = new DOMParser({ locator: true });
 
     private outputChannel: vscode.OutputChannel;
@@ -22,15 +22,22 @@ export class DocumentCacheEntry {
         this.outputChannel = outputChannel;
     }
 
-    public getParsedDocument(): Document | null {
-        return this.isDirty ? null : this.parsedDocument;
+    public get xml(): Document {
+        if(!this.parsedDocument) {
+            throw new Error('Document not yet parsed');
+        }
+        return this.parsedDocument;
+    }
+
+    public get isDirty(): boolean {
+        return this._isDirty;
     }
 
     public async update(): Promise<void> {
         const now = Date.now();
 
         // Mark as dirty while the update is pending
-        this.isDirty = true;
+        this._isDirty = true;
 
         // If this is the first call or 500ms have passed since the last update, resolve immediately
         if (!this.lastUpdateTime || now - this.lastUpdateTime >= 500) {
@@ -62,7 +69,7 @@ export class DocumentCacheEntry {
     }
 
     public getNodePosition(node: any): { line: number; column: number } | undefined {
-        if (this.isDirty) {
+        if (this._isDirty) {
             return undefined; // Return undefined if the cache is dirty
         }
     
@@ -73,7 +80,7 @@ export class DocumentCacheEntry {
     }
 
     public findNodeByPosition(document: Document, line: number, column: number): Node | undefined {
-        if (this.isDirty) {
+        if (this._isDirty) {
             return undefined; // Return undefined if the cache is dirty
         }
     
@@ -104,7 +111,7 @@ export class DocumentCacheEntry {
         this.parsedDocument = this.parser.parseFromString(text, 'application/xml');
         
         const endTime = Date.now();
-        this.isDirty = false; // Mark as clean after the update is complete
+        this._isDirty = false; // Mark as clean after the update is complete
         this.outputChannel.appendLine(`Cache update completed for ${this.document.uri.toString()} in ${endTime - startTime}ms`);
     }
 }

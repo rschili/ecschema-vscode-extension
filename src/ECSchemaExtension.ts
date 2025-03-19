@@ -1,11 +1,12 @@
 
 import * as vscode from 'vscode';
-import { encodeTokenModifiers, encodeTokenType, TokenModifier, TokenType } from "./SemanticTokens";
+import { encodeTokenModifiers, encodeTokenType, legend, TokenModifier, TokenType } from "./SemanticTokens";
 import { DocumentCache, DocumentCacheEntry } from "./Cache";
+import { getRangeForNode, isElement, isAttribute } from './Xml';
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
-export class CombinedProvider implements vscode.DefinitionProvider,
+export class ECSchemaExtension implements vscode.DefinitionProvider,
                                         vscode.HoverProvider,
                                         vscode.DocumentSemanticTokensProvider,
                                         vscode.CodeActionProvider,
@@ -52,9 +53,45 @@ export class CombinedProvider implements vscode.DefinitionProvider,
             diagnostics.push(new vscode.Diagnostic(range, `Error parsing document: ${e.message}`, vscode.DiagnosticSeverity.Error));
             return undefined;
         }
-        const builder = new vscode.SemanticTokensBuilder();
-        builder.push(1, 2, 3, encodeTokenType(TokenType.Class), encodeTokenModifiers(TokenModifier.Declaration));
-        return builder.build();
+        if(cacheEntry.isDirty) {
+            return undefined; // cannot provide anything right now
+        }
+
+        const builder = new vscode.SemanticTokensBuilder(legend);
+        const rootNode = cacheEntry.xml.firstChild?.nextSibling?.nextSibling;
+        if(!rootNode) {
+            return undefined;
+        }
+        const rootName = rootNode?.localName;
+        if (rootName !== 'ECSchema') {
+            const diagnostics: vscode.Diagnostic[] = [];
+            const range = getRangeForNode(rootNode);
+            diagnostics.push(new vscode.Diagnostic(range, 'Root node ECSchema expected', vscode.DiagnosticSeverity.Error));
+            return undefined;
+        }
+
+        let tokens: vscode.SemanticTokens;
+        try {
+        builder.push(getRangeForNode(rootNode), TokenType.Keyword, [TokenModifier.Declaration]);
+
+        for(const node of rootNode.childNodes) {
+            if(isElement(node)) {
+                builder.push(getRangeForNode(node), TokenType.Keyword, [TokenModifier.Declaration]);
+                for(const subNode of node.childNodes) {
+                    if(isElement(subNode)) {
+                        builder.push(getRangeForNode(subNode), TokenType.Keyword, [TokenModifier.Declaration]);
+                    }
+                }
+            }
+        }
+        tokens = builder.build();
+        } catch (e: any) {
+            this.outputChannel.appendLine(`Error building semantic tokens: ${e.message}`);
+            return undefined;
+        }
+
+        this.outputChannel.appendLine(`Returning semantic tokens`);
+        return tokens;
     }
 
     public async provideCodeActions(document: vscode.TextDocument, _range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {
