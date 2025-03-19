@@ -14,6 +14,7 @@ export class DocumentCacheEntry {
     private lastUpdateTime: number = Date.now() - 100;
     private _isDirty: boolean = true; // Indicates whether the cache is up-to-date
     private parser: DOMParser = new DOMParser({ locator: true });
+    public diagnostics: vscode.Diagnostic[] = [];
 
     private outputChannel: vscode.OutputChannel;
 

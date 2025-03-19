@@ -5,6 +5,7 @@ import { DocumentCache, DocumentCacheEntry } from "./Cache";
 import { getRangeForNode, isElement, isAttribute, getPositionDataForNode } from './Xml';
 import { ecschemaOutline3_2, Element } from './ECSchemaOutline';
 import { Node } from "@xmldom/xmldom";
+import { createDiagnosticWithoutPosition } from './VSCodeHelpers';
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
 
@@ -50,14 +51,15 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
             cacheEntry = await this.documentCache.getOrCreateEntry(document.uri, document);
         } catch (e: any) {
             this.outputChannel.appendLine(`Error getting document cache entry: ${e.message}`);
-            const diagnostics: vscode.Diagnostic[] = [];
-            const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(document.lineCount - 1, 500));
-            diagnostics.push(new vscode.Diagnostic(range, `Error parsing document: ${e.message}`, vscode.DiagnosticSeverity.Error));
+            this.diagnosticCollection.set(document.uri, [
+                createDiagnosticWithoutPosition('Root node ECSchema expected', vscode.DiagnosticSeverity.Error)
+            ]);
             return undefined;
         }
         if(cacheEntry.isDirty) {
             return undefined; // cannot provide anything right now
         }
+        cacheEntry.diagnostics = [];
 
         const builder = new vscode.SemanticTokensBuilder(legend);
         const rootNode = cacheEntry.xml.firstChild?.nextSibling?.nextSibling;
@@ -66,16 +68,17 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
         }
         const rootName = rootNode?.localName;
         if (rootName !== 'ECSchema') {
-            const diagnostics: vscode.Diagnostic[] = [];
             const range = getRangeForNode(rootNode);
-            diagnostics.push(new vscode.Diagnostic(range, 'Root node ECSchema expected', vscode.DiagnosticSeverity.Error));
+            cacheEntry.diagnostics.push(new vscode.Diagnostic(range, 'Root node ECSchema expected', vscode.DiagnosticSeverity.Error));
+            this.diagnosticCollection.set(document.uri, cacheEntry.diagnostics);
             return undefined;
         }
 
         let tokens: vscode.SemanticTokens;
         try {
-        this.TokenizeElement(builder, rootNode);
+        this.TokenizeElement(builder, rootNode, cacheEntry);
         tokens = builder.build();
+        this.diagnosticCollection.set(document.uri, cacheEntry.diagnostics);
         } catch (e: any) {
             this.outputChannel.appendLine(`Error building semantic tokens: ${e.message}`);
             return undefined;
@@ -85,7 +88,7 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
         return tokens;
     }
 
-    private TokenizeElement(builder: vscode.SemanticTokensBuilder, element: Node) {
+    private TokenizeElement(builder: vscode.SemanticTokensBuilder, element: Node, cacheEntry: DocumentCacheEntry) {
         if(element.localName === null) {
             return;
         }
@@ -94,7 +97,7 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
         if(!outline) {
             const range = getRangeForNode(element);
             const diagnostic = new vscode.Diagnostic(range, `Unexpected element: ${element.localName}`, vscode.DiagnosticSeverity.Warning);
-            this.diagnosticCollection.set(vscode.Uri.parse(element.baseURI || ''), [diagnostic]);
+            cacheEntry.diagnostics.push(diagnostic);
             return;
         }
 
@@ -103,18 +106,17 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
             for(const child of element.childNodes) {
                 if(isElement(child) && child.localName !== null) {
                     if(outline.allowedChildren !== undefined && outline.allowedChildren.includes(child.localName)) {
-                        this.TokenizeElement(builder, child);
+                        this.TokenizeElement(builder, child, cacheEntry);
                     } else {
                         const range = getRangeForNode(child);
                         const diagnostic = new vscode.Diagnostic(range, `Unexpected child element: ${child.localName}`, vscode.DiagnosticSeverity.Warning);
-                        this.diagnosticCollection.set(vscode.Uri.parse(child.baseURI || ''), [diagnostic]);
+                        cacheEntry.diagnostics.push(diagnostic);
                     }
                 } else if(isAttribute(child)) {
                     
                 }
             }
         }
-
     }
 
     private AddSemanticToken(builder: vscode.SemanticTokensBuilder, node: Node, tokenType: TokenType, tokenModifier?: TokenModifier) {
@@ -146,33 +148,7 @@ export class ECSchemaExtension implements vscode.DefinitionProvider,
     }
 
     public async provideFullDiagnostics(editor: vscode.TextEditor): Promise<void> {
-        const diagnostics: vscode.Diagnostic[] = [];
-        const doc = editor.document;
-        const text = doc.getText();
-        this.outputChannel.appendLine(`Generating diagnostics for ${doc.uri.toString()}`);
-        const rootElementMatch = text.match(/<ECSchema\s+([^>]+)>/);
-    
-        if (rootElementMatch) {
-            const attributesText = rootElementMatch[1];
-            const attributes = attributesText.split(/\s+/).map(attr => attr.split('=')[0]);
-    
-            REQUIRED_ATTRIBUTES.forEach(attr => {
-                if (!attributes.includes(attr)) {
-                    const index = text.indexOf('<ECSchema');
-                    const range = new vscode.Range(doc.positionAt(index), doc.positionAt(index + rootElementMatch[0].length));
-                    diagnostics.push(new vscode.Diagnostic(range, `Missing attribute: ${attr}`, vscode.DiagnosticSeverity.Warning));
-                }
-            });
-    
-            const duplicateAttributes = attributes.filter((attr, index) => attributes.indexOf(attr) !== index);
-            duplicateAttributes.forEach(attr => {
-                const index = attributesText.indexOf(attr);
-                const range = new vscode.Range(doc.positionAt(index), doc.positionAt(index + attr.length));
-                diagnostics.push(new vscode.Diagnostic(range, `Duplicate attribute: ${attr}`, vscode.DiagnosticSeverity.Error));
-            });
-        }
-    
-        this.diagnosticCollection.set(doc.uri, diagnostics);
+         
     }
 
     private createRemoveDuplicateFix(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction {
