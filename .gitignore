@@ -4,3 +4,4 @@ node_modules
 *.vsix
 *.tsbuildinfo
 obj
+bin

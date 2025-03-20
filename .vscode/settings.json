@@ -1,3 +1,23 @@
 {
-	"editor.insertSpaces": true
-}
+	"editor.insertSpaces": true,
+	"files.exclude": {
+	  "**/node_modules": true,
+	  "**/bower_components": true,
+	  "**/dist": true,
+	  "**/build": true,
+	  "**/coverage": true,
+	  "**/bin": true,
+	  "**/obj": true,
+	  "**/.vs": true,
+	  "**/*.user": true,
+	  "**/*.suo": true,
+	  "**/*.cache": true,
+	  "**/*.log": true,
+	  "**/*.tmp": true,
+	  "**/*.bak": true,
+	  "**/out": true,
+	  "**/package-lock.json": true,
+	  "**/tsconfig.tsbuildinfo": true,
+	}
+  }
+  
