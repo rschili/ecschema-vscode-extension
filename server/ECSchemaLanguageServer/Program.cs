@@ -2,9 +2,22 @@
 using OmniSharp.Extensions.LanguageServer.Server;
 using ECSchemaLanguageServer;
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+if (!Debugger.IsAttached)
+{
+    Console.WriteLine($"Waiting for debugger to attach... (Process ID: {Environment.ProcessId})");
+    LaunchVSCodeAndAttach(Environment.ProcessId);
+    while (!Debugger.IsAttached)
+    {
+        await Task.Delay(1000); // Wait for the debugger to attach
+    }
+    Console.WriteLine("Debugger attached.");
+}
 
 IObserver<WorkDoneProgressReport> workDone = null!;
-var server = await LanguageServer.From(options =>
+using var server = await LanguageServer.From(options =>
     options
         .WithInput(Console.OpenStandardInput())
         .WithOutput(Console.OpenStandardOutput())
@@ -95,3 +108,26 @@ var server = await LanguageServer.From(options =>
 ).ConfigureAwait(false);
 
 await server.WaitForExit.ConfigureAwait(false);
+
+static void LaunchVSCodeAndAttach(int processId)
+{
+    // Path to the workspace or folder to open in VS Code
+    string workspacePath = "/home/rob/code/ecschema-vscode-extension/server";
+
+    // Command to launch VS Code
+    string codeCommand = "code";
+
+    // Arguments to open VS Code and attach to the current process
+    string args = $"--folder-uri {workspacePath} --new-window --command \"workbench.action.debug.selectandstart\"";
+
+    // Start VS Code
+    Process.Start(new ProcessStartInfo
+    {
+        FileName = codeCommand,
+        EnvironmentVariables = { { "DEBUG_PROCESS_ID", processId.ToString() } },
+        Arguments = args,
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+    });
+}
