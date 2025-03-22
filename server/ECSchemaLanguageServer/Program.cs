@@ -1,7 +1,4 @@
-﻿using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using OmniSharp.Extensions.LanguageServer.Server;
-using ECSchemaLanguageServer;
-using Microsoft.Extensions.Configuration;
+﻿using ECSchemaLanguageServer;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -15,6 +12,15 @@ if (!Debugger.IsAttached)
     }
     Console.WriteLine("Debugger attached.");
 }
+
+//TODO: Use https://github.com/xoofx/TurboXml?tab=readme-ov-file
+
+//TODO: Use NativeAOT to compile the server
+
+//TODO: Microsoft.Data.Sqlite with journal mode WAL
+
+//TODO: Use Draco LSP https://www.nuget.org/packages/Draco.Lsp/0.4.14-pre
+// https://github.com/Draco-lang/Compiler/tree/main
 
 IObserver<WorkDoneProgressReport> workDone = null!;
 using var server = await LanguageServer.From(options =>
@@ -103,6 +109,7 @@ using var server = await LanguageServer.From(options =>
                 {
                     //scopedConfig.Add(config.Key, config.Value);
                 }
+                languageServer.Window.LogInfo("Hello from the server!");
             }
         )
 ).ConfigureAwait(false);
