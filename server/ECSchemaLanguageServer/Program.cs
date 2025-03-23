@@ -1,25 +1,98 @@
-﻿using System.IO.Pipelines;
-using Draco.Lsp.Server;
+﻿﻿using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using OmniSharp.Extensions.LanguageServer.Server;
 using ECSchemaLanguageServer;
+using Microsoft.Extensions.Configuration;
 
-//TODO: Use https://github.com/xoofx/TurboXml?tab=readme-ov-file
+IObserver<WorkDoneProgressReport> workDone = null!;
+var server = await LanguageServer.From(options =>
+    options
+        .WithInput(Console.OpenStandardInput())
+        .WithOutput(Console.OpenStandardOutput())
+        .WithHandler<TextDocumentHandler>()
+        .WithHandler<DidChangeWatchedFilesHandler>()
+        .WithHandler<FoldingRangeHandler>()
+        .WithHandler<WorkspaceSymbolsHandler>()
+        .WithHandler<DocumentSymbolHandler>()
+        .WithHandler<SemanticTokensHandler>()
+        .OnInitialize(
+            async (server, request, token) =>
+            {
+                var manager = server.WorkDoneManager.For(
+                    request, new WorkDoneProgressBegin
+                    {
+                        Title = "Server is starting...",
+                        Percentage = 10,
+                    }
+                );
+                workDone = manager;
 
-//TODO: Use NativeAOT to compile the server
+                await Task.Delay(2000).ConfigureAwait(false);
 
-//TODO: Microsoft.Data.Sqlite with journal mode WAL
-//PRAGMA journal_mode=WAL;
+                manager.OnNext(
+                    new WorkDoneProgressReport
+                    {
+                        Percentage = 20,
+                        Message = "loading in progress"
+                    }
+                );
+            }
+        )
+        .OnInitialized(
+            async (server, request, response, token) =>
+            {
+                workDone.OnNext(
+                    new WorkDoneProgressReport
+                    {
+                        Percentage = 40,
+                        Message = "loading almost done",
+                    }
+                );
 
-//TODO: Use Draco LSP https://www.nuget.org/packages/Draco.Lsp/0.4.14-pre
-// https://github.com/Draco-lang/Compiler/tree/main
+                await Task.Delay(2000).ConfigureAwait(false);
 
-var pipe = new StdioDuplexPipe();
-var client = LanguageServer.Connect(pipe);
-var server = new Server(client);
-await client.RunAsync(server);
+                workDone.OnNext(
+                    new WorkDoneProgressReport
+                    {
+                        Message = "loading done",
+                        Percentage = 100,
+                    }
+                );
+                workDone.OnCompleted();
+            }
+        )
+        .OnStarted(
+            async (languageServer, token) =>
+            {
+                using var manager = await languageServer.WorkDoneManager.Create(new WorkDoneProgressBegin { Title = "Doing some work..." })
+                                                        .ConfigureAwait(false);
 
-sealed class StdioDuplexPipe : IDuplexPipe
-{
-    public PipeReader Input { get; } = PipeReader.Create(Console.OpenStandardInput());
+                manager.OnNext(new WorkDoneProgressReport { Message = "doing things..." });
+                await Task.Delay(10000).ConfigureAwait(false);
+                manager.OnNext(new WorkDoneProgressReport { Message = "doing things... 1234" });
+                await Task.Delay(10000).ConfigureAwait(false);
+                manager.OnNext(new WorkDoneProgressReport { Message = "doing things... 56789" });
 
-    public PipeWriter Output { get; } = PipeWriter.Create(Console.OpenStandardOutput());
-}
+                var configuration = await languageServer.Configuration.GetConfiguration(
+                    new ConfigurationItem
+                    {
+                        Section = "typescript",
+                    }, new ConfigurationItem
+                    {
+                        Section = "terminal",
+                    }
+                ).ConfigureAwait(false);
+
+                foreach (var config in languageServer.Configuration.AsEnumerable())
+                {
+                    //baseConfig.Add(config.Key, config.Value);
+                }
+
+                foreach (var config in configuration.AsEnumerable())
+                {
+                    //scopedConfig.Add(config.Key, config.Value);
+                }
+            }
+        )
+).ConfigureAwait(false);
+
+await server.WaitForExit.ConfigureAwait(false);
