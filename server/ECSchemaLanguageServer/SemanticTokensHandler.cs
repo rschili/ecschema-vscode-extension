@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ECSchemaLanguageServer.Services;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace ECSchemaLanguageServer
 {
@@ -16,16 +18,19 @@ namespace ECSchemaLanguageServer
     public class SemanticTokensHandler : SemanticTokensHandlerBase
     {
         private readonly ILogger _logger;
+        private readonly ECSchemaService _service; 
 
-        public SemanticTokensHandler(ILogger<SemanticTokensHandler> logger)
+        public SemanticTokensHandler(ILogger<SemanticTokensHandler> logger, ECSchemaService service)
         {
             _logger = logger;
+            _service = service;
         }
 
         public override async Task<SemanticTokens?> Handle(
             SemanticTokensParams request, CancellationToken cancellationToken
         )
         {
+            
             var result = await base.Handle(request, cancellationToken).ConfigureAwait(false);
             return result;
         }
@@ -93,9 +98,10 @@ namespace ECSchemaLanguageServer
             SemanticTokensCapability capability, ClientCapabilities clientCapabilities
         )
         {
+            _service.Server.Window.LogInfo("Test from Semantics");
             return new SemanticTokensRegistrationOptions
             {
-                DocumentSelector = TextDocumentSelector.ForLanguage("csharp"),
+                DocumentSelector = TextDocumentSelector.ForLanguage("ecschema"),
                 Legend = new SemanticTokensLegend
                 {
                     TokenModifiers = capability.TokenModifiers,
