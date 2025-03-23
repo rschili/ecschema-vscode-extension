@@ -3,7 +3,7 @@
 	"displayName": "ecschema vscode extension",
 	"description": "Extension for ECSchema grammar",
 	"version": "0.0.1",
-	"publisher": "Robert Schili",
+	"publisher": "rschili",
 	"private": true,
 	"license": "MIT",
 	"repository": {
