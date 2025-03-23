@@ -3,7 +3,7 @@
 	"displayName": "ecschema vscode extension",
 	"description": "Extension for ECSchema grammar",
 	"version": "0.0.1",
-	"publisher": "rschili",
+	"publisher": "Robert Schili",
 	"private": true,
 	"license": "MIT",
 	"repository": {
@@ -17,41 +17,23 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:ecschema"
+		"onLanguage:ecschema",
+		"workspaceContains:**/*.ecschema.xml"
 	],
 	"main": "./client/out/extension.js",
 	"contributes": {
 		"languages": [
 			{
 				"id": "ecschema",
+				"aliases": [
+					"ECSchema",
+					"ecschema"
+				],
 				"extensions": [
 					".ecschema.xml"
 				]
 			}
-		],
-		"configuration": {
-			"type": "object",
-			"title": "ECSchema configuration",
-			"properties": {
-				"ecschema.maxNumberOfProblems": {
-					"scope": "resource",
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the extension."
-				},
-				"ecschema.trace.server": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
-				}
-			}
-		}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

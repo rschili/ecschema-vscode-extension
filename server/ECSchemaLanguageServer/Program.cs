@@ -18,6 +18,7 @@ if (!Debugger.IsAttached)
 //TODO: Use NativeAOT to compile the server
 
 //TODO: Microsoft.Data.Sqlite with journal mode WAL
+//PRAGMA journal_mode=WAL;
 
 //TODO: Use Draco LSP https://www.nuget.org/packages/Draco.Lsp/0.4.14-pre
 // https://github.com/Draco-lang/Compiler/tree/main
