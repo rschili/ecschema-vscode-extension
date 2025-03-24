@@ -26,36 +26,25 @@ namespace ECSchemaLanguageServer
             _service = service;
         }
 
-        public override async Task<SemanticTokens?> Handle(
-            SemanticTokensParams request, CancellationToken cancellationToken
-        )
+        protected override SemanticTokensRegistrationOptions CreateRegistrationOptions(SemanticTokensCapability capability, ClientCapabilities clientCapabilities)
         {
-            
-            var result = await base.Handle(request, cancellationToken).ConfigureAwait(false);
-            return result;
+            return new SemanticTokensRegistrationOptions
+            {
+                DocumentSelector = TextDocumentSelector.ForLanguage("ecschema"),
+                Legend = new SemanticTokensLegend
+                {
+                    TokenModifiers = capability.TokenModifiers,
+                    TokenTypes = capability.TokenTypes
+                },
+                Full = new SemanticTokensCapabilityRequestFull
+                {
+                    Delta = false,
+                },
+                Range = false
+            };
         }
 
-        public override async Task<SemanticTokens?> Handle(
-            SemanticTokensRangeParams request, CancellationToken cancellationToken
-        )
-        {
-            var result = await base.Handle(request, cancellationToken).ConfigureAwait(false);
-            return result;
-        }
-
-        public override async Task<SemanticTokensFullOrDelta?> Handle(
-            SemanticTokensDeltaParams request,
-            CancellationToken cancellationToken
-        )
-        {
-            var result = await base.Handle(request, cancellationToken).ConfigureAwait(false);
-            return result;
-        }
-
-        protected override async Task Tokenize(
-            SemanticTokensBuilder builder, ITextDocumentIdentifierParams identifier,
-            CancellationToken cancellationToken
-        )
+        protected override async Task Tokenize(SemanticTokensBuilder builder, ITextDocumentIdentifierParams identifier, CancellationToken cancellationToken)
         {
             using var typesEnumerator = RotateEnum(SemanticTokenType.Defaults).GetEnumerator();
             using var modifiersEnumerator = RotateEnum(SemanticTokenModifier.Defaults).GetEnumerator();
@@ -94,26 +83,7 @@ namespace ECSchemaLanguageServer
             }
         }
 
-        protected override SemanticTokensRegistrationOptions CreateRegistrationOptions(
-            SemanticTokensCapability capability, ClientCapabilities clientCapabilities
-        )
-        {
-            _service.Server.Window.LogInfo("Test from Semantics");
-            return new SemanticTokensRegistrationOptions
-            {
-                DocumentSelector = TextDocumentSelector.ForLanguage("ecschema"),
-                Legend = new SemanticTokensLegend
-                {
-                    TokenModifiers = capability.TokenModifiers,
-                    TokenTypes = capability.TokenTypes
-                },
-                Full = new SemanticTokensCapabilityRequestFull
-                {
-                    Delta = true
-                },
-                Range = true
-            };
-        }
+
     }
 #pragma warning restore 618
 }

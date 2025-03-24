@@ -7,20 +7,23 @@ interface IDotnetAcquireResult {
 
 let client: lsp.LanguageClient;
 export async function activate(context: vscode.ExtensionContext) {
+    const version = '9.0';
+    const requestingExtensionId = 'ecschema-vscode-extension';
     // make sure dotnet is installed
-    await vscode.commands.executeCommand('dotnet.showAcquisitionLog');
-    // Console app requires .NET Core 2.2.0
-    const commandRes = await vscode.commands.executeCommand<IDotnetAcquireResult>('dotnet.acquire', { version: '9.0', requestingExtensionId: 'ecschema-vscode-extension' });
-    const dotnetPath = commandRes!.dotnetPath;
-    if (!dotnetPath || typeof dotnetPath !== 'string')
-    {
-        throw new Error('Could not resolve the dotnet path!');
+    let status = await vscode.commands.executeCommand<IDotnetAcquireResult>('dotnet.acquireStatus',  {version, requestingExtensionId });
+    if(!status || !status.dotnetPath || typeof status.dotnetPath !== 'string') {
+        vscode.window.showErrorMessage(`.NET version ${version} is required to run the ECSchema Language Server. Will now try to download it.`);
+        status = await vscode.commands.executeCommand<IDotnetAcquireResult>('dotnet.acquire', { version, requestingExtensionId });
     }
-
+    if(!status || !status.dotnetPath || typeof status.dotnetPath !== 'string') {
+        vscode.window.showErrorMessage(`Failed to download .NET version ${version}. ECSchema Language Server will not work.`);
+        return;
+    }
+    const dotnetPath = status.dotnetPath;
     const dllPath = `${process.cwd()}/server/ECSchemaLanguageServer/bin/Debug/net9.0/ECSchemaLanguageServer.dll`;
     if (!require('fs').existsSync(dllPath)) {
-        console.error(`DLL not found at path: ${dllPath}`);
-        process.exit(1);
+        vscode.window.showErrorMessage(`DLL not found at path: ${dllPath}`);
+        return;
     }
     
     let serverOptions: lsp.ServerOptions = {
@@ -38,8 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
         documentSelector: [{ scheme: 'file', language: 'ecschema' }],
         progressOnInitialization: true,
     }
-    console.log(`Current working directory: ${process.cwd()}`);
-    console.log(`Executing file: ${__filename}`);
+
     client = new lsp.LanguageClient("ecschema", "ECSchema Language Server", serverOptions, clientOptions);
     client.registerProposedFeatures();
     client.setTrace(lsp.Trace.Verbose);
