@@ -52,6 +52,6 @@
 		"typescript-eslint": "^8.26.0"
 	},
 	"extensionDependencies": [
-    	"ms-dotnettools.vscode-dotnet-runtime"
-  	]
+		"ms-dotnettools.vscode-dotnet-runtime"
+	]
 }
