@@ -24,8 +24,8 @@ server:
 # Publish the .NET server package for multiple platforms
 publish:
 	@echo "Publishing .NET server package for Windows, Linux, and macOS..."
-	cd server && dotnet publish -r win-x64 -c Release
 	cd server && dotnet publish -r linux-x64 -c Release
+	cd server && dotnet publish -r win-x64 -c Release
 	cd server && dotnet publish -r osx-x64 -c Release
 
 # Clean build artifacts

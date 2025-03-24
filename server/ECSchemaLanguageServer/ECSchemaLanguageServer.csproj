@@ -5,10 +5,11 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
-    <!--<PublishAot>true</PublishAot>-->
-    <SelfContained>true</SelfContained>
+    <!--<PublishTrimmed>true</PublishTrimmed>-->
+    <!--<PublishSingleFile>true</PublishSingleFile>-->
+    <!--<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>-->
+    <!--<PublishAot>true</PublishAot>--> <!--This seems to break dependency injection with "System.PlatformNotSupportedException: Dynamic code generation is not supported on this platform."-->
+    <!--<SelfContained>true</SelfContained>-->
   </PropertyGroup>
 
   <ItemGroup>
