@@ -13,7 +13,7 @@ updates:
       day: "wednesday"
     open-pull-requests-limit: 10
     groups:
-      dotnet:
+      github-actions:
         patterns:
           - "*" # Prefer a single PR per solution update.
   # NuGet packages
@@ -24,7 +24,7 @@ updates:
       day: "wednesday"
     open-pull-requests-limit: 25
     groups:
-      dotnet:
+      dependency-updates:
         patterns:
           - "*"
   # Enable version updates for npm
@@ -38,3 +38,7 @@ updates:
       interval: "weekly"
       day: "wednesday"
     open-pull-requests-limit: 25
+    groups:
+      dependency-updates:
+        patterns:
+          - "*"
