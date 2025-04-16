@@ -1,5 +1,5 @@
 # Targets
-.PHONY: all build install client server clean publish
+.PHONY: all build install client server clean publish test
 
 # Default target
 # Build both client and server
@@ -20,6 +20,11 @@ client:
 server:
 	@echo "Building .NET server package..."
 	cd server && dotnet build
+
+# Run tests for server
+test:
+	@echo "Running tests for server..."
+	cd server/ECSchemaLanguageServer.Tests && dotnet run --disable-logo --output Detailed
 
 # Publish the .NET server package for multiple platforms
 publish:
