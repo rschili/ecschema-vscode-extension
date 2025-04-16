@@ -43,7 +43,7 @@
 		"postinstall": "cd client && npm install && cd ../server && dotnet restore && cd .."
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.13.0",
+		"@eslint/js": "^9.24.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/node": "^20",
 		"@types/vscode": "^1.73.0",
