@@ -19,125 +19,28 @@ using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 #pragma warning disable CS0618
 
 namespace ECSchemaLanguageServer;
-internal class TextDocumentHandler : TextDocumentSyncHandlerBase
-{
-    private readonly ILanguageServerConfiguration _configuration;
-
-    private readonly TextDocumentSelector _textDocumentSelector = new TextDocumentSelector(
-        new TextDocumentFilter
-        {
-            Pattern = "**/*.ecschema.xml"
-        }
-    );
-
-    public TextDocumentHandler(ILanguageServerConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
-    public TextDocumentSyncKind Change { get; } = TextDocumentSyncKind.Full;
-
-    public override Task<Unit> Handle(DidChangeTextDocumentParams notification, CancellationToken token)
-    {
-        return Unit.Task;
-    }
-
-    public override async Task<Unit> Handle(DidOpenTextDocumentParams notification, CancellationToken token)
-    {
-        await Task.Yield();
-        await _configuration.GetScopedConfiguration(notification.TextDocument.Uri, token).ConfigureAwait(false);
-        return Unit.Value;
-    }
-
-    public override Task<Unit> Handle(DidCloseTextDocumentParams notification, CancellationToken token)
-    {
-        if (_configuration.TryGetScopedConfiguration(notification.TextDocument.Uri, out var disposable))
-        {
-            disposable.Dispose();
-        }
-
-        return Unit.Task;
-    }
-
-    public override Task<Unit> Handle(DidSaveTextDocumentParams notification, CancellationToken token) => Unit.Task;
-
-    protected override TextDocumentSyncRegistrationOptions CreateRegistrationOptions(TextSynchronizationCapability capability, ClientCapabilities clientCapabilities) => new TextDocumentSyncRegistrationOptions()
-    {
-        DocumentSelector = _textDocumentSelector,
-        Change = Change,
-        Save = new SaveOptions() { IncludeText = true }
-    };
-
-    public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new TextDocumentAttributes(uri, "csharp");
-}
-
-internal class DocumentSymbolHandler : IDocumentSymbolHandler
-{
-    async Task<SymbolInformationOrDocumentSymbolContainer?> IRequestHandler<DocumentSymbolParams, SymbolInformationOrDocumentSymbolContainer?>.Handle(DocumentSymbolParams request, CancellationToken cancellationToken)
-    {
-        // you would normally get this from a common source that is managed by current open editor, current active editor, etc.
-        var content = await File.ReadAllTextAsync(DocumentUri.GetFileSystemPath(request)!, cancellationToken).ConfigureAwait(false);
-        var lines = content.Split('\n');
-        var symbols = new List<SymbolInformationOrDocumentSymbol>();
-        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
-        {
-            var line = lines[lineIndex];
-            var parts = line.Split(' ', '.', '(', ')', '{', '}', '[', ']', ';');
-            var currentCharacter = 0;
-            foreach (var part in parts)
-            {
-                if (string.IsNullOrWhiteSpace(part))
-                {
-                    currentCharacter += part.Length + 1;
-                    continue;
-                }
-
-                symbols.Add(
-                    new DocumentSymbol
-                    {
-                        Detail = part,
-                        Deprecated = true,
-                        Kind = SymbolKind.Field,
-                        Tags = new[] { SymbolTag.Deprecated },
-                        Range = new Range(
-                            new Position(lineIndex, currentCharacter),
-                            new Position(lineIndex, currentCharacter + part.Length)
-                        ),
-                        SelectionRange =
-                            new Range(
-                                new Position(lineIndex, currentCharacter),
-                                new Position(lineIndex, currentCharacter + part.Length)
-                            ),
-                        Name = part
-                    }
-                );
-                currentCharacter += part.Length + 1;
-            }
-        }
-
-        // await Task.Delay(2000, cancellationToken);
-        return symbols;
-    }
-
-    public DocumentSymbolRegistrationOptions GetRegistrationOptions(DocumentSymbolCapability capability, ClientCapabilities clientCapabilities) => new DocumentSymbolRegistrationOptions
-    {
-        DocumentSelector = TextDocumentSelector.ForLanguage("csharp")
-    };
-}
 
 internal class WorkspaceSymbolsHandler : IWorkspaceSymbolsHandler
 {
     private readonly IServerWorkDoneManager _serverWorkDoneManager;
     private readonly IProgressManager _progressManager;
 
-    public WorkspaceSymbolsHandler(IServerWorkDoneManager serverWorkDoneManager, IProgressManager progressManager)
+    private readonly ILogger _logger;
+    public Workspace Workspace { get; }
+
+    public WorkspaceSymbolsHandler(IServerWorkDoneManager serverWorkDoneManager, IProgressManager progressManager, ILogger<WorkspaceSymbolsHandler> logger, Workspace workspace)
     {
         _serverWorkDoneManager = serverWorkDoneManager;
         _progressManager = progressManager;
+        _logger = logger;
+        Workspace = workspace;
     }
+
+    public WorkspaceSymbolRegistrationOptions GetRegistrationOptions(WorkspaceSymbolCapability capability, ClientCapabilities clientCapabilities) => new WorkspaceSymbolRegistrationOptions();
 
     public async Task<Container<WorkspaceSymbol>?> Handle(WorkspaceSymbolParams request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Handling WorkspaceSymbol request for {Query}", request.Query);
         using var reporter = _serverWorkDoneManager.For(
             request, new WorkDoneProgressBegin
             {
@@ -243,7 +146,4 @@ internal class WorkspaceSymbolsHandler : IWorkspaceSymbolsHandler
             );
         }
     }
-
-    public WorkspaceSymbolRegistrationOptions GetRegistrationOptions(WorkspaceSymbolCapability capability, ClientCapabilities clientCapabilities) => new WorkspaceSymbolRegistrationOptions();
-
 }

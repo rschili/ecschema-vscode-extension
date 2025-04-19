@@ -12,17 +12,17 @@ export async function activate(context: vscode.ExtensionContext) {
     // make sure dotnet is installed
     let status = await vscode.commands.executeCommand<IDotnetAcquireResult>('dotnet.acquireStatus',  {version, requestingExtensionId });
     if(!status || !status.dotnetPath || typeof status.dotnetPath !== 'string') {
-        vscode.window.showErrorMessage(`.NET version ${version} is required to run the ECSchema Language Server. Will now try to download it. This should only happen once.`);
+        vscode.window.showInformationMessage(`Installing missing .NET version ${version} for ECSchema Language Server. This should only happen once after install.`);
         status = await vscode.commands.executeCommand<IDotnetAcquireResult>('dotnet.acquire', { version, requestingExtensionId });
     }
     if(!status || !status.dotnetPath || typeof status.dotnetPath !== 'string') {
-        vscode.window.showErrorMessage(`Failed to download .NET version ${version}. ECSchema Language Server will not work.`);
+        vscode.window.showWarningMessage(`Failed to download .NET version ${version}. ECSchema Language Server will not work.`);
         return;
     }
     const dotnetPath = status.dotnetPath;
     const dllPath = `${process.cwd()}/server/ECSchemaLanguageServer/bin/Debug/net9.0/ECSchemaLanguageServer.dll`;
     if (!require('fs').existsSync(dllPath)) {
-        vscode.window.showErrorMessage(`DLL not found at path: ${dllPath}`);
+        vscode.window.showErrorMessage(`ECSchema Language Server DLL not found at path: ${dllPath}`);
         return;
     }
     
