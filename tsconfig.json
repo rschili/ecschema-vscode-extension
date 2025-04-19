@@ -4,17 +4,9 @@
 		"target": "es2020",
 		"lib": ["es2020"],
 		"outDir": "out",
+		"sourceMap": true,
 		"rootDir": "src",
-		"sourceMap": true
+		"strict": true
 	},
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules",
-		".vscode-test"
-	],
-	"references": [
-		{ "path": "./client" }
-	]
+	"exclude": ["node_modules", ".vscode-test"]
 }

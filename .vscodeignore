@@ -1,28 +1,9 @@
-# Node.js artifacts
-node_modules/
-bower_components/
-dist/
-build/
-coverage/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.tmp/
-.temp/
-samples/
-.vscode/
-xsd/
-
-# .NET artifacts
-bin/
-obj/
-.vs/
-.vscode/
-*.user
-*.suo
-*.cache
-*.log
-
-# Other temporary files
-*.tmp
-*.bak
+.vscode/**
+.vscode-test/**
+out/test/**
+out/**/*.map
+src/**
+.gitignore
+tsconfig.json
+vsc-extension-quickstart.md
+tslint.json
