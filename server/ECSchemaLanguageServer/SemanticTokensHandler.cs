@@ -1,3 +1,4 @@
+using ECSchemaLanguageServer.Services;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
@@ -6,20 +7,20 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
 namespace ECSchemaLanguageServer;
 
+#pragma warning disable 618
 public class SemanticTokensHandler : SemanticTokensHandlerBase
 {
     private readonly ILogger _logger;
-    private readonly Workspace Workspace; 
+    private readonly ECSchemaService Service; 
 
-    public SemanticTokensHandler(ILogger<SemanticTokensHandler> logger, Workspace workspace)
+    public SemanticTokensHandler(ILogger<SemanticTokensHandler> logger, ECSchemaService service)
     {
         _logger = logger;
-        Workspace = workspace;
+        Service = service;
     }
 
     protected override SemanticTokensRegistrationOptions CreateRegistrationOptions(SemanticTokensCapability capability, ClientCapabilities clientCapabilities)
     {
-        _logger.LogInformation("Creating registration options for SemanticTokens.");
         return new SemanticTokensRegistrationOptions
         {
             DocumentSelector = TextDocumentSelector.ForLanguage("ecschema"),
@@ -38,18 +39,18 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
     protected override async Task Tokenize(SemanticTokensBuilder builder, ITextDocumentIdentifierParams identifier, CancellationToken cancellationToken)
     {
-        var document = Workspace.GetOrCreateFile(identifier.TextDocument.Uri, cancellationToken);
+        var document = Service.Workspace.GetOrCreateSchemaDocument(identifier.TextDocument.Uri, cancellationToken);
 
         var syntaxTree = await SyntaxTreeParser.ParseAsync(identifier.TextDocument.Uri, cancellationToken).ConfigureAwait(false);
         document.SyntaxTree = syntaxTree;
 
-        _logger.LogInformation("Tokenizing document: {DocumentUri}", identifier.TextDocument.Uri);
+        
 
 
         using var typesEnumerator = RotateEnum(SemanticTokenType.Defaults).GetEnumerator();
         using var modifiersEnumerator = RotateEnum(SemanticTokenModifier.Defaults).GetEnumerator();
         // you would normally get this from a common source that is managed by current open editor, current active editor, etc.
-        var content = await System.IO.File.ReadAllTextAsync(DocumentUri.GetFileSystemPath(identifier), cancellationToken).ConfigureAwait(false);
+        var content = await File.ReadAllTextAsync(DocumentUri.GetFileSystemPath(identifier), cancellationToken).ConfigureAwait(false);
         await Task.Yield();
 
         foreach (var (line, text) in content.Split('\n').Select((text, line) => ( line, text )))
@@ -67,9 +68,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
         }
     }
 
-    protected override Task<SemanticTokensDocument> GetSemanticTokensDocument(ITextDocumentIdentifierParams @params, CancellationToken cancellationToken)
+    protected override Task<SemanticTokensDocument>
+        GetSemanticTokensDocument(ITextDocumentIdentifierParams @params, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetSemanticTokensDocument: {DocumentUri}", @params.TextDocument.Uri);
         return Task.FromResult(new SemanticTokensDocument(RegistrationOptions.Legend));
     }
 
@@ -82,5 +83,8 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
                 yield return item;
         }
     }
+
+
 }
+#pragma warning restore 618
 

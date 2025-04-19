@@ -2,12 +2,12 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 
 namespace ECSchemaLanguageServer;
 
-public class File
+public class SchemaDocument
 {
     public readonly DocumentUri Uri;
     public SyntaxTree? SyntaxTree { get; set; }
 
-    public File(DocumentUri uri)
+    public SchemaDocument(DocumentUri uri)
     {
         Uri = uri;
     }

@@ -9,12 +9,12 @@ public static class SyntaxTreeParser
     public static async Task<SyntaxTree> ParseAsync(DocumentUri uri, CancellationToken cancellationToken)
     {
         var path = DocumentUri.GetFileSystemPath(uri);
-        if(path == null || !System.IO.File.Exists(path))
+        if(path == null || !File.Exists(path))
         {
             return new SyntaxTree();
         }
 
-        var text = await System.IO.File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+        var text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
         var handler = new XmlHandler();
         XmlParser.Parse(text, ref handler);
         return handler.Result;

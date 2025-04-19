@@ -6,6 +6,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using ECSchemaLanguageServer.Services;
 
 var server = await LanguageServer.From(options =>
     options
@@ -13,29 +14,31 @@ var server = await LanguageServer.From(options =>
         .WithOutput(Console.OpenStandardOutput())
         .ConfigureLogging(x => x
             .AddLanguageProtocolLogging().SetMinimumLevel(LogLevel.Debug))
+            
         .WithHandler<TextDocumentHandler>()
         .WithHandler<DidChangeWatchedFilesHandler>()
-        //.WithHandler<FoldingRangeHandler>()
-        //.WithHandler<WorkspaceSymbolsHandler>()
-        //.WithHandler<DocumentSymbolHandler>()
+        .WithHandler<FoldingRangeHandler>()
+        .WithHandler<WorkspaceSymbolsHandler>()
+        .WithHandler<DocumentSymbolHandler>()
         .WithHandler<SemanticTokensHandler>()
+        .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace)))
         .WithServices(services =>
             {
-                services.AddSingleton<Workspace>();
+                services.AddSingleton<ECSchemaService>();
             }
         )
         .OnInitialize(
-            async (server, request, token) =>
+            (server, request, token) =>
             {
                 server.Window.SendNotification(
                     new ShowMessageParams
                     {
                         Type = MessageType.Info,
-                        Message = $"ECSchema language server is initializing... (Process ID: {Environment.ProcessId})",
+                        Message = "ECSchema language server is initializing...",
                     }
                 );
-
                 server.Window.LogInfo("ECSchema language server is initializing...");
+                return Task.CompletedTask;
             }
         )
 ).ConfigureAwait(false);
