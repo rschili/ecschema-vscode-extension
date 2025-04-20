@@ -6,6 +6,7 @@
 	"publisher": "rschili",
 	"private": true,
 	"license": "MIT",
+	"pricing": "Free",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/rschili/ecschema-vscode-extension"
@@ -14,22 +15,13 @@
 		"vscode": "^1.98.2"
 	},
 	"categories": [
+		"Linters",
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:ecschema"
+		"onLanguage:xml"
 	],
 	"main": "./out/extension.js",
-	"contributes": {
-		"languages": [
-			{
-				"id": "ecschema",
-				"extensions": [
-					".ecschema.xml"
-				]
-			}
-		]
-	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",

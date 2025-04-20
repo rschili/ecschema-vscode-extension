@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Just a plain xml file which should not be recognized -->
+<ECSchema schemaName="TestSchema" alias="ts" version="01.00.00" description="desc" displayLabel="dis" xmlns="http://www.bentley.com/schemas/Bentley.ECXML.3.2">
+    <ECSchemaReference name="Bentley_Standard_CustomAttributes" version="01.00.12" alias="bsca"/>
+    <ECCustomAttributeClass typeName="GeneralCustomAttribute" description="Custom Attribute that can be applied to anything." modifier="None">
+        <ECProperty propertyName="Primitive" typeName="string" readOnly="false"/>
+    </ECCustomAttributeClass>
+    <ECCustomAttributes>
+        <GeneralCustomAttribute xmlns="TestSchema.01.00.00">
+            <Primitive >General Value</Primitive>
+        </GeneralCustomAttribute>
+    </ECCustomAttributes>
+    <ECEnumeration typeName="Enumeration" backingTypeName="int" description="This is a description." displayLabel="This is a display label." isStrict="true">
+        <ECEnumerator name="One" value="1" displayLabel="First"/>
+        <ECEnumerator name="Two" value="2" displayLabel="Second"/>
+        <ECEnumerator name="Three" value="3" displayLabel="Third"/>
+    </ECEnumeration>
+    <ECEntityClass typeName="BaseEntity" description="fsdf" displayLabel="dwq" modifier="Abstract" >
+        <ECProperty propertyName="InheritedProperty" typeName="string" readOnly="false" />
+    </ECEntityClass>
+    <ECCustomAttributeClass typeName="ClassCustomAttribute"  description="Custom Attribute that can only be applied to classes." modifier="None" appliesTo="EntityClass, CustomAttributeClass, StructClass, RelationshipClass, AnyClass">
+        <ECProperty propertyName="Primitive" typeName="string" readOnly="false" />
+    </ECCustomAttributeClass>
+    <ECStructClass typeName="Struct" displayLabel="Struct Class" modifier="None" >
+        <ECProperty propertyName="Primitive1" typeName="int" readOnly="false"/>
+    </ECStructClass>
+    <ECEntityClass typeName="Entity" modifier="Sealed" >
+        <BaseClass>BaseEntity</BaseClass>
+        <ECCustomAttributes>
+            <ClassCustomAttribute xmlns="TestSchema.01.00.00">
+                <Primitive>General Value on Class</Primitive>
+            </ClassCustomAttribute>
+        </ECCustomAttributes>
+        <ECProperty propertyName="Primitive1" typeName="binary" displayLabel="Property Display Label" readOnly="false"/>
+        <ECProperty propertyName="Primitive2" typeName="boolean" description="Property Description" readOnly="false"/>
+        <ECProperty propertyName="Primitive3" typeName="dateTime" readOnly="true"/>
+        <ECProperty propertyName="Primitive4" typeName="double" readOnly="false"/>
+        <ECProperty propertyName="Primitive5" typeName="Bentley.Geometry.Common.IGeometry" readOnly="false"/>
+        <ECProperty propertyName="Primitive6" typeName="int" readOnly="false"/>
+        <ECProperty propertyName="Primitive7" typeName="long" readOnly="false"/>
+        <ECProperty propertyName="Primitive8" typeName="point2d" readOnly="false"/>
+        <ECProperty propertyName="Primitive9" typeName="point3d" readOnly="false"/>
+        <ECProperty propertyName="Primitive10" typeName="string" readOnly="false"/>
+        <ECProperty propertyName="Calculated" typeName="string" readOnly="false">
+            <ECCustomAttributes>
+                <CalculatedECPropertySpecification xmlns="Bentley_Standard_CustomAttributes.01.00.12">
+                    <ECExpression>&quot;Primitve 10=&quot; &amp; this.Primitive10</ECExpression>
+                </CalculatedECPropertySpecification>
+            </ECCustomAttributes>
+        </ECProperty>
+        <ECArrayProperty  propertyName="Array" typeName="long" readOnly="false" minOccurs="0" maxOccurs="unbounded"/>
+        <ECStructProperty  propertyName="Struct1" typeName="Struct" readOnly="false"/>
+        <ECStructArrayProperty  propertyName="StructArray" typeName="Struct" readOnly="false" minOccurs="0" maxOccurs="unbounded"/>
+        <ECProperty propertyName="Enumerated" typeName="Enumeration" readOnly="false"/>
+        <ECNavigationProperty  propertyName="NavigationProperty" readOnly="false" relationshipName="RelationshipClass" direction="forward"/>
+    </ECEntityClass>
+    <ECRelationshipClass typeName="RelationshipClass" modifier="None" strength="referencing" strengthDirection="forward">
+        <ECProperty propertyName="RelationshipProperty" typeName="string" readOnly="false"/>
+        <Source  multiplicity="(0..1)" polymorphic="true" roleLabel="foo">
+            <Class  class="Entity"/>
+        </Source>
+        <Target  multiplicity="(0..1)" polymorphic="true" roleLabel="foo">
+            <Class class="Entity"/>
+        </Target>
+    </ECRelationshipClass>
+</ECSchema>

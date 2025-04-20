@@ -3,8 +3,8 @@ import { ECSchemaExtension } from './ECSchemaExtension';
 import { legend } from './SemanticTokens';
 
 export function activate(context: vscode.ExtensionContext) {
-    const selector: vscode.DocumentFilter = { language: 'ecschema' };
-    const outputChannel = vscode.window.createOutputChannel('ECSchema Extension');
+    const selector: vscode.DocumentFilter = { language: 'xml', pattern: '**/*.ecschema.xml' };
+    const outputChannel = vscode.window.createOutputChannel('ECSchema extension');
     const diagnosticCollection = vscode.languages.createDiagnosticCollection("ecschema");
     const provider = new ECSchemaExtension(outputChannel, diagnosticCollection);
     
