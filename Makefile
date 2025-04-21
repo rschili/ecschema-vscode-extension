@@ -10,3 +10,7 @@ build:
 install:
 	@echo "Installing dependencies for client and server..."
 	npm install
+
+update-license:
+	@echo "Updating license headers..."
+	npx generate-license-file --input package.json --output LICENSES_THIRDPARTY --overwrite
