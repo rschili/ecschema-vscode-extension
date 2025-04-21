@@ -4,7 +4,6 @@ import { encodeTokenModifiers, encodeTokenType, legend, TokenModifier, TokenType
 import { DocumentCache, DocumentCacheEntry } from "./Cache";
 import { getRangeForNode, isElement, isAttribute, getPositionDataForNode } from './Xml';
 import { ecschemaOutline3_2, Element } from './ECSchemaOutline';
-import { Node } from "@xmldom/xmldom";
 import { createDiagnosticWithoutPosition } from './VSCodeHelpers';
 
 const REQUIRED_ATTRIBUTES = ['schemaName', 'alias', 'version', 'description', 'displayLabel', 'xmlns'];
