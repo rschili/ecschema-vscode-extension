@@ -1,23 +1,28 @@
 import * as vscode from 'vscode';
-import { ECSchemaExtension } from './ECSchemaExtension';
+import { Context } from './VSCodeProviders/Context';
 import { legend } from './SemanticTokens';
+import { SemanticTokensProvider } from "./VSCodeProviders/SemanticTokensProvider";
+import { CodeActionProvider } from "./VSCodeProviders/CodeActionProvider";
+import { CompletionItemProvider } from "./VSCodeProviders/CompletionProvider";
+import { HoverProvider } from "./VSCodeProviders/HoverProvider";
+import { DefinitionProvider } from "./VSCodeProviders/DefinitionProvider";
 
 export function activate(context: vscode.ExtensionContext) {
     const selector: vscode.DocumentFilter = { language: 'xml', pattern: '**/*.ecschema.xml' };
     const outputChannel = vscode.window.createOutputChannel('ECSchema extension');
     const diagnosticCollection = vscode.languages.createDiagnosticCollection("ecschema");
-    const provider = new ECSchemaExtension(outputChannel, diagnosticCollection);
-    
+    const providerContext: Context = new Context(outputChannel, diagnosticCollection);
+
     outputChannel.appendLine('ECSchema extension activated');
 
     const subscriptions = [
-        vscode.languages.registerDocumentSemanticTokensProvider(selector, provider, legend),
-        vscode.languages.registerCodeActionsProvider(selector, provider, {
+        vscode.languages.registerDocumentSemanticTokensProvider(selector, new SemanticTokensProvider(providerContext), legend),
+        vscode.languages.registerCodeActionsProvider(selector, new CodeActionProvider(providerContext), {
             providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
         }),
-        vscode.languages.registerCompletionItemProvider(selector, provider, '<'),
-        vscode.languages.registerHoverProvider(selector, provider),
-        vscode.languages.registerDefinitionProvider(selector, provider),
+        vscode.languages.registerCompletionItemProvider(selector, new CompletionItemProvider(providerContext), '<'),
+        vscode.languages.registerHoverProvider(selector, new HoverProvider(providerContext)),
+        vscode.languages.registerDefinitionProvider(selector, new DefinitionProvider(providerContext)),
         diagnosticCollection
     ];
 
