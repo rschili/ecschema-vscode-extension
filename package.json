@@ -29,14 +29,14 @@
 		"watch": "tsc -watch -p ./"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.1",
+		"@eslint/js": "^9.39.2",
 		"@stylistic/eslint-plugin": "^5.6.1",
-		"@types/node": "^24",
-		"@types/vscode": "^1.106.1",
-		"eslint": "^9.39.1",
+		"@types/node": "^25",
+		"@types/vscode": "^1.107.0",
+		"eslint": "^9.39.2",
 		"generate-license-file": "^4.1.1",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.49.0"
+		"typescript-eslint": "^8.50.0"
 	},
 	"dependencies": {
 		"@xml-tools/ast": "^5.0.5",
